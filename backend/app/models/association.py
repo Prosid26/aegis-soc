@@ -24,3 +24,11 @@ incident_asset = Table(
     Column('incident_id', Integer, ForeignKey('incidents.id')),
     Column('asset_id', Integer, ForeignKey('assets.id'))
 )
+
+# Association table for detection and MITRE technique
+detection_mitre_technique = Table(
+    'detection_mitre_technique',
+    Base.metadata,
+    Column('detection_id', Integer, ForeignKey('detections.id')),
+    Column('mitre_technique_id', Integer, ForeignKey('mitre_techniques.id'))
+)

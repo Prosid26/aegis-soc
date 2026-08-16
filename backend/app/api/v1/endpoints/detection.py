@@ -1,12 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any
-from app.db.session import get_db
+from app.db.session = get_db
 from app.services.detection_engine import DetectionEngine
+from app.services.mitre_mapping import get_mitre_techniques_for_rule
 from app.core.deps import get_current_active_user
 from app.models.user import User
 from app.models.detection import Detection
 from app.models.incident import Incident
+from app.models.mitre import MITRETechnique
 
 router = APIRouter()
 
@@ -50,6 +52,16 @@ def _save_alerts_to_db(db: Session, alerts: List[Dict[str, Any]]) -> List[Dict[s
         # But to be safe, we can flush the detection to get an ID.
         db.flush()  # This assigns an ID to the detection without committing
 
+        # Link detection to MITRE techniques if available in the alert
+        if "mitre" in alert and alert["mitre"]:
+            # We expect alert["mitre"] to be a list of dicts with at least "technique_id"
+            # But we need the technique IDs to query the MITRETechnique objects
+            # We can get the technique IDs from the alert's mitre list, but note: we don't have the technique ID in the alert's mitre dict? We added it.
+            mitre_technique_ids = [m["technique_id"] for m in alert["mitre"] if "technique_id" in m]
+            if mitre_technique_ids:
+                techniques = db.query(MITRETechnique).filter(MITRETechnique.id.in_(mitre_technique_ids)).all()
+                detection.mitre_techniques.extend(techniques)
+
         # Create an incident for this detection
         incident = Incident(
             title=f"Incident: {alert['name']}",
@@ -63,6 +75,12 @@ def _save_alerts_to_db(db: Session, alerts: List[Dict[str, Any]]) -> List[Dict[s
         )
         # Link the detection to the incident
         incident.detections.append(detection)
+        # Link incident to the same MITRE techniques as the detection
+        if "mitre" in alert and alert["mitre"]:
+            mitre_technique_ids = [m["technique_id"] for m in alert["mitre"] if "technique_id" in m]
+            if mitre_technique_ids:
+                techniques = db.query(MITRETechnique).filter(MITRETechnique.id.in_(mitre_technique_ids)).all()
+                incident.mitre_techniques.extend(techniques)
         db.add(incident)
     db.commit()
     return alerts
@@ -77,6 +95,18 @@ def run_detection_rules(
     """
     detection_engine = DetectionEngine(db)
     alerts = detection_engine.run_all_detections()
+    # Augment alerts with MITRE context
+    for alert in alerts:
+        mitre_techniques = get_mitre_techniques_for_rule(db, alert["rule_id"])
+        alert["mitre"] = [
+            {
+                "technique_id": t.technique_id,
+                "technique_name": t.name,
+                "tactic": t.tactic,
+                "description": t.description,
+            }
+            for t in mitre_techniques
+        ]
     _save_alerts_to_db(db, alerts)
     return alerts
 
@@ -92,6 +122,18 @@ def run_brute_force_detection(
     """
     detection_engine = DetectionEngine(db)
     alerts = detection_engine.detect_brute_force(time_window_minutes, threshold)
+    # Augment alerts with MITRE context
+    for alert in alerts:
+        mitre_techniques = get_mitre_techniques_for_rule(db, alert["rule_id"])
+        alert["mitre"] = [
+            {
+                "technique_id": t.technique_id,
+                "technique_name": t.name,
+                "tactic": t.tactic,
+                "description": t.description,
+            }
+            for t in mitre_techniques
+        ]
     _save_alerts_to_db(db, alerts)
     return alerts
 
@@ -107,6 +149,18 @@ def run_port_scan_detection(
     """
     detection_engine = DetectionEngine(db)
     alerts = detection_engine.detect_port_scan(threshold_ports, time_window_minutes)
+    # Augment alerts with MITRE context
+    for alert in alerts:
+        mitre_techniques = get_mitre_techniques_for_rule(db, alert["rule_id"])
+        alert["mitre"] = [
+            {
+                "technique_id": t.technique_id,
+                "technique_name": t.name,
+                "tactic": t.tactic,
+                "description": t.description,
+            }
+            for t in mitre_techniques
+        ]
     _save_alerts_to_db(db, alerts)
     return alerts
 
@@ -120,5 +174,17 @@ def run_privilege_escalation_detection(
     """
     detection_engine = DetectionEngine(db)
     alerts = detection_engine.detect_privilege_escalation()
+    # Augment alerts with MITRE context
+    for alert in alerts:
+        mitre_techniques = get_mitre_techniques_for_rule(db, alert["rule_id"])
+        alert["mitre"] = [
+            {
+                "technique_id": t.technique_id,
+                "technique_name": t.name,
+                "tactic": t.tactic,
+                "description": t.description,
+            }
+            for t in mitre_techniques
+        ]
     _save_alerts_to_db(db, alerts)
     return alerts

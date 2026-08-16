@@ -6,6 +6,7 @@ from app.models.mitre import MITRETechnique
 from app.schemas.mitre import MITRETechniqueCreate, MITRETechniqueInDB
 from app.core.deps import get_current_active_user
 from app.models.user import User
+from app.services.mitre_mapping import get_mitre_techniques_for_rule
 
 router = APIRouter()
 
@@ -74,3 +75,15 @@ def delete_mitre_technique(
     db.delete(technique)
     db.commit()
     return None
+
+@router.get("/detections/{rule_id}", response_model=List[MITRETechniqueInDB])
+def get_mitre_for_detection_rule(
+    rule_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Get MITRE techniques associated with a detection rule ID.
+    """
+    techniques = get_mitre_techniques_for_rule(db, rule_id)
+    return techniques

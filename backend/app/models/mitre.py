@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, JSON
 from sqlalchemy.orm import relationship
 from app.db.base import Base
-from app.models.association import incident_mitre_technique
+from app.models.association import incident_mitre_technique, detection_mitre_technique
 from datetime import datetime
 
 class MITRETechnique(Base):
@@ -20,3 +20,4 @@ class MITRETechnique(Base):
 
     # Relationships
     incidents = relationship("Incident", secondary=incident_mitre_technique, back_populates="mitre_techniques")
+    detections = relationship("Detection", secondary=detection_mitre_technique, back_populates="mitre_techniques")

@@ -36,6 +36,7 @@ class Detection(Base):
     # Relationships
     asset_info = relationship("Asset", back_populates="detections")
     incidents = relationship("Incident", secondary="detection_incident", back_populates="detections")
+    mitre_techniques = relationship("MITRETechnique", secondary="detection_mitre_technique", back_populates="detections")
 
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)

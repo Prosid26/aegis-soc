@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 from datetime import datetime
+from app.schemas.mitre import MITRETechniqueInDB
 
 class IncidentBase(BaseModel):
     incident_id: Optional[str] = None
@@ -11,7 +12,7 @@ class IncidentBase(BaseModel):
     assigned_to: Optional[int] = None
     risk_score: Optional[int] = None
     confidence: Optional[int] = None
-    mitre_techniques: Optional[List[str]] = None
+    mitre_techniques: Optional[List[MITRETechniqueInDB]] = None
     affected_assets: Optional[List[int]] = None
     timeline: Optional[List[Dict[str, Any]]] = None
     raw_data: Optional[Dict[str, Any]] = None
@@ -27,7 +28,7 @@ class IncidentUpdate(BaseModel):
     assigned_to: Optional[int] = None
     risk_score: Optional[int] = None
     confidence: Optional[int] = None
-    mitre_techniques: Optional[List[str]] = None
+    mitre_techniques: Optional[List[MITRETechniqueInDB]] = None
     affected_assets: Optional[List[int]] = None
     timeline: Optional[List[Dict[str, Any]]] = None
     raw_data: Optional[Dict[str, Any]] = None
