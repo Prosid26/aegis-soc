@@ -1,29 +1,32 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
 from app.db.session import get_db
 from app.models.incident import Incident
-from app.models.event import Event
-from app.models.asset import Asset
-from app.models.threat_intel import ThreatIntel
-from app.models.mitre import MITRETechnique
 from app.core.deps import get_current_active_user
 from app.models.user import User
 from app.services.ai_analyst import AIAnalystService
-import json
 
 router = APIRouter()
 
-@router.post("/analyze-incident/{incident_id}")
+@router.post("/incidents/{incident_id}/analyze")
 async def analyze_incident(
     incident_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
+    """
+    Analyze an incident using the AI Security Analyst.
+    Returns structured analysis output.
+    """
     # Check if incident exists
     incident = db.query(Incident).filter(Incident.id == incident_id).first()
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
+
+    # Optional: Check if the user has permission to view this incident
+    # For now, we assume any authenticated user can analyze any incident.
+    # In a production system, you would check roles/permissions.
 
     # Initialize AI analyst service
     ai_analyst = AIAnalystService(db)
@@ -31,17 +34,12 @@ async def analyze_incident(
     # Perform analysis
     analysis_result = await ai_analyst.analyze_incident(incident)
 
-    # Update incident with AI analysis results
-    incident.risk_score = analysis_result.get("risk_score")
-    incident.confidence = analysis_result.get("confidence")
-    # Note: In a real implementation, we would also update mitre_techniques, timeline, etc.
-    db.commit()
-
     return {
         "incident_id": incident_id,
         "analysis": analysis_result
     }
 
+# Keep the other endpoints for event investigation and threat hunting as they were
 @router.post("/investigate-event/{event_id}")
 async def investigate_event(
     event_id: int,
