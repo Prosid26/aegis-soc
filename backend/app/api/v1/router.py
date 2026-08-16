@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import auth, events, incidents, assets, threat_intel, mitre, analytics, ai, detection
+from app.api.v1.endpoints import auth, events, ai, incidents, assets, threat_intel, mitre, analytics, detection
 
 router = APIRouter()
 router.include_router(auth.router, prefix="/auth", tags=["auth"])

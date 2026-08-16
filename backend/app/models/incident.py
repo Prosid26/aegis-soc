@@ -1,10 +1,10 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, JSON
 from sqlalchemy.orm import relationship
-from app.db.base = Base
-from app.models.association = incident_mitre_technique, incident_asset
-from app.models.ai_analysis = IncidentAIAnalysis
-from datetime = datetime
+from app.db.base import Base
+from app.models.association import incident_mitre_technique, incident_asset
+from datetime import datetime
 
+from app.models.ai_analysis import IncidentAIAnalysis
 class Incident(Base):
     __tablename__ = "incidents"
 
@@ -27,5 +27,5 @@ class Incident(Base):
     assignee = relationship("User")
     mitre_techniques = relationship("MITRETechnique", secondary=incident_mitre_technique, back_populates="incidents")
     affected_assets = relationship("Asset", secondary=incident_asset, back_populates="incidents")
-    detections = relationship("Detection", secondary="detection_incident", back_populates="detections")
+    detections = relationship("Detection", secondary="detection_incident", back_populates="incidents")
     ai_analyses = relationship("IncidentAIAnalysis", back_populates="incident")

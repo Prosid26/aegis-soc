@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any
-from app.db.session = get_db
+from app.db.session import get_db
 from app.services.detection_engine import DetectionEngine
 from app.services.mitre_mapping import get_mitre_techniques_for_rule
 from app.core.deps import get_current_active_user

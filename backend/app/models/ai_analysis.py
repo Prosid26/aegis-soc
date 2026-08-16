@@ -4,7 +4,6 @@ SQLAlchemy model for persistent AI analysis history.
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, JSON
 from sqlalchemy.orm import relationship
 from app.db.base import Base
-from app.models.incident import Incident
 from datetime import datetime
 
 class IncidentAIAnalysis(Base):
