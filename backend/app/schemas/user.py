@@ -48,7 +48,7 @@ class UserInDBBase(UserBase):
         from_attributes = True
 
 class UserInDB(UserInDBBase):
-    hashed_password: str
+    pass
 
 class UserInDBWithRoles(UserInDB):
     roles: List[RoleInDB] = []
