@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 from pydantic import Field
+from typing import List
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "AegisSOC"
@@ -19,6 +20,10 @@ class Settings(BaseSettings):
     AI_REQUEST_TIMEOUT: int = Field(default=30, env="AI_REQUEST_TIMEOUT")
     AI_MAX_RETRIES: int = Field(default=3, env="AI_MAX_RETRIES")
     AI_BACKOFF_FACTOR: float = Field(default=0.5, env="AI_BACKOFF_FACTOR")
+    # CORS settings
+    CORS_ORIGINS: List[str] = Field(default=["http://localhost:3000"], env="CORS_ORIGINS")
+    # API documentation
+    ENABLE_DOCS: bool = Field(default=True, env="ENABLE_DOCS")
 
     class Config:
         case_sensitive = True

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { apiClient } from '@/lib/api';
 import { authUtils } from '@/lib/api';
+import { Cpu, Terminal, Radio } from 'lucide-react';
 
 export default function AIAnalyst() {
   const [investigationSteps, setInvestigationSteps] = useState([
@@ -148,107 +149,42 @@ export default function AIAnalyst() {
 
   if (loading) {
     return (
-      <section className="relative z-10 pt-20 pb-24 bg-zinc-950">
-        <div className="relative">
-          <div className="absolute inset-0 -z-10">
-            <div className="relative h-[300px]">
-              <div className="absolute inset-0 bg-gradient-to-r from-zinc-900 via-zinc-950 to-zinc-900"></div>
-              <svg className="absolute inset-0 -z-10" width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
-                <defs>
-                  <pattern id="circuit" width="20" height="20" patternUnits="userSpaceOnUse">
-                    <path d="M0,10 L20,10 M10,0 L10,20" stroke="rgba(0,189,212,0.03)" strokeWidth="0.5" />
-                  </pattern>
-                </defs>
-                <rect width="100" height="100" fill="url(#circuit)" />
-              </svg>
+      <section className="relative z-10 pt-16 pb-20 bg-[#03070b] border-b border-panel-border">
+        <div className="max-w-4xl mx-auto px-6">
+          <div className="bg-panel rounded-lg border border-panel-border p-6 shadow-2xl space-y-6">
+            <div className="text-center space-y-2">
+              <span className="inline-flex items-center space-x-2 text-[10px] font-mono tracking-widest text-cyber-blue uppercase bg-cyber-blue-muted px-2.5 py-1 border border-cyber-blue/20 rounded">
+                <span className="w-1.5 h-1.5 rounded-full bg-cyber-blue animate-pulse"></span>
+                <span>AI CO-PILOT SIMULATOR</span>
+              </span>
+              <h3 className="text-xl font-bold text-white tracking-tight">AI Security Analyst in Action</h3>
+              <p className="text-zinc-400 text-xs max-w-lg mx-auto">
+                Watch as the autonomous analyst correlates system signals, identifies attack sequences, and generates threat mitigation advice.
+              </p>
             </div>
-          </div>
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="sr-only">AI Security Analyst</h2>
-            <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl border border-zinc-800/50 p-6">
-              <div className="mb-6">
-                <h3 className="text-xl font-semibold text-white mb-4">AI Security Analyst in Action</h3>
-                <p className="text-zinc-300 mb-4">
-                  Watch as our AI analyst autonomously investigates a security incident, correlates evidence,
-                  and provides actionable intelligence.
-                </p>
-              </div>
 
-              {/* Incident Summary */}
-              <div className="mb-8 p-6 bg-zinc-900/30 rounded-lg border border-zinc-800">
-                <div className="flex items-start space-x-4">
-                  <div className="h-10 w-10 flex items-center justify-center rounded bg-primary/20 text-primary flex-shrink-0">
-                    🤖
+            {/* Incident Summary */}
+            <div className="p-4 bg-panel-header border border-panel-border rounded flex items-center space-x-3">
+              <div className="h-8 w-8 flex items-center justify-center rounded bg-cyber-blue-muted border border-cyber-blue/20 text-cyber-blue shrink-0">
+                <Cpu className="h-4 w-4 animate-pulse" />
+              </div>
+              <div className="min-w-0">
+                <h4 className="font-bold text-white text-sm">Incident Investigation: Calibrating sensors...</h4>
+                <p className="text-zinc-500 text-xs font-mono">Analyzing incoming network signals</p>
+              </div>
+            </div>
+
+            {/* Investigation Steps */}
+            <div className="space-y-2">
+              {investigationSteps.map(step => (
+                <div key={step.id} className="flex items-center justify-between p-3 bg-panel-header/50 border border-panel-border/30 rounded text-xs opacity-60">
+                  <div className="flex items-center space-x-3">
+                    <span className="text-[10px] font-mono bg-zinc-800/30 text-zinc-500 border border-zinc-700/20 px-2 py-0.5 rounded">WAIT</span>
+                    <span className="font-mono text-zinc-400">{step.title}</span>
                   </div>
-                  <div>
-                    <h4 className="font-semibold text-white mb-1">Incident Investigation: Loading...</h4>
-                    <p className="text-zinc-400 text-sm">Analyzing security events...</p>
-                  </div>
+                  <span className="text-[10px] font-mono text-zinc-600">[STEP-0{step.id}]</span>
                 </div>
-              </div>
-
-              {/* Investigation Steps */}
-              <div className="space-y-4">
-                {investigationSteps.map(step => (
-                  <div key={step.id} className="flex items-start space-x-4 p-4 bg-zinc-900/20 rounded-lg border border-zinc-800/30 transition-all hover:border-zinc-700/50">
-                    <div className="h-10 w-10 flex items-center justify-center rounded-full flex-shrink-0">
-                      {step.status === 'complete' ? (
-                        <span className="text-green-500">✓</span>
-                      ) : step.status === 'in-progress' ? (
-                        <span className="text-yellow-500 animate-spin">⟳</span>
-                      ) : (
-                        <span className="text-zinc-500">○</span>
-                      )}
-                    </div>
-                    <div className="flex-1 space-y-1">
-                      <h4 className="font-medium text-white">{step.title}</h4>
-                      <p className="text-zinc-400 text-sm">{step.description}</p>
-                    </div>
-                    <div className="h-4 w-4 flex items-center justify-center">
-                      {step.status === 'complete' && (
-                        <span className="h-3 w-3 bg-green-500 rounded-full" />
-                      )}
-                      {step.status === 'in-progress' && (
-                        <span className="h-3 w-3 bg-yellow-500 rounded-full animate-ping" />
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Results Preview */}
-              <div className="mt-8 p-6 bg-zinc-900/30 rounded-lg border border-zinc-800">
-                <h4 className="font-semibold text-white mb-4">Investigation Results</h4>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <p className="text-zinc-400">Risk Score:</p>
-                    <p className="text-2xl font-bold text-red-500">--/100</p>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-zinc-400">Severity:</p>
-                    <p className="text-2xl font-bold text-red-500">--</p>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-zinc-400">Likely Technique:</p>
-                    <p className="text-xl font-semibold text-blue-400">--</p>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-zinc-400">Confidence:</p>
-                    <p className="text-2xl font-bold text-blue-400">--%</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Button */}
-              <div className="mt-6 text-center">
-                <button
-                  onClick={triggerAiAnalysis}
-                  className="flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-white hover:bg-primary/90 transition-colors"
-                  disabled={analyzing}
-                >
-                  {analyzing ? 'Analyzing...' : 'Analyze Incident'}
-                </button>
-              </div>
+              ))}
             </div>
           </div>
         </div>
@@ -258,108 +194,77 @@ export default function AIAnalyst() {
 
   if (error && !analyzing) {
     return (
-      <section className="relative z-10 pt-20 pb-24 bg-zinc-950">
-        <div className="relative">
-          <div className="absolute inset-0 -z-10">
-            <div className="relative h-[300px]">
-              <div className="absolute inset-0 bg-gradient-to-r from-zinc-900 via-zinc-950 to-zinc-900"></div>
-              <svg className="absolute inset-0 -z-10" width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
-                <defs>
-                  <pattern id="circuit" width="20" height="20" patternUnits="userSpaceOnUse">
-                    <path d="M0,10 L20,10 M10,0 L10,20" stroke="rgba(0,189,212,0.03)" strokeWidth="0.5" />
-                  </pattern>
-                </defs>
-                <rect width="100" height="100" fill="url(#circuit)" />
-              </svg>
+      <section className="relative z-10 pt-16 pb-20 bg-[#03070b] border-b border-panel-border">
+        <div className="max-w-4xl mx-auto px-6">
+          <div className="bg-panel rounded-lg border border-panel-border p-6 shadow-2xl space-y-6">
+            <div className="text-center space-y-2">
+              <span className="inline-flex items-center space-x-2 text-[10px] font-mono tracking-widest text-cyber-blue uppercase bg-cyber-blue-muted px-2.5 py-1 border border-cyber-blue/20 rounded">
+                <span className="w-1.5 h-1.5 rounded-full bg-cyber-blue animate-pulse"></span>
+                <span>AI CO-PILOT SIMULATOR</span>
+              </span>
+              <h3 className="text-xl font-bold text-white tracking-tight">AI Security Analyst in Action</h3>
+              <p className="text-zinc-400 text-xs max-w-lg mx-auto">
+                Watch as the autonomous analyst correlates system signals, identifies attack sequences, and generates threat mitigation advice.
+              </p>
             </div>
-          </div>
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="sr-only">AI Security Analyst</h2>
-            <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl border border-zinc-800/50 p-6">
-              <div className="mb-6">
-                <h3 className="text-xl font-semibold text-white mb-4">AI Security Analyst in Action</h3>
-                <p className="text-zinc-300 mb-4">
-                  Watch as our AI analyst autonomously investigates a security incident, correlates evidence,
-                  and provides actionable intelligence.
+
+            {/* Incident Summary */}
+            <div className="p-4 bg-panel-header border border-panel-border rounded flex items-center space-x-3">
+              <div className="h-8 w-8 flex items-center justify-center rounded bg-cyber-blue-muted border border-cyber-blue/20 text-cyber-blue shrink-0">
+                <Cpu className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <h4 className="font-bold text-white text-sm">Potential Credential Stuffing Attack</h4>
+                <p className="text-zinc-500 text-xs font-mono">347 failed authentication attempts detected across 18 accounts</p>
+              </div>
+            </div>
+
+            {/* Investigation Steps */}
+            <div className="space-y-2">
+              {investigationSteps.map(step => (
+                <div key={step.id} className="flex items-center justify-between p-3 bg-panel-header/50 border border-panel-border/30 rounded text-xs">
+                  <div className="flex items-center space-x-3">
+                    <span className="text-[10px] font-mono font-bold text-severity-low bg-severity-low/10 border border-severity-low/20 px-2 py-0.5 rounded">OK</span>
+                    <span className="font-mono text-zinc-300">{step.title}</span>
+                  </div>
+                  <span className="text-[10px] font-mono text-zinc-500">[STEP-0{step.id}]</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Results Preview */}
+            <div className="p-4 bg-[#020508] border border-panel-border rounded space-y-3">
+              <h4 className="text-[10px] font-mono tracking-widest text-zinc-500 uppercase border-b border-panel-border/30 pb-1.5">INVESTIGATION RESULTS</h4>
+              <div className="grid gap-4 grid-cols-2 sm:grid-cols-4 text-xs font-mono">
+                <div className="space-y-1">
+                  <p className="text-[10px] text-zinc-500">RISK INDEX</p>
+                  <p className="text-lg font-bold text-severity-critical">{results.riskScore}/100</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] text-zinc-500">SEVERITY</p>
+                  <p className="text-lg font-bold text-severity-critical">{results.severity}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] text-zinc-500">TECHNIQUE</p>
+                  <p className="text-xs text-cyber-blue font-bold truncate">{results.technique}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] text-zinc-500">CONFIDENCE</p>
+                  <p className="text-lg font-bold text-cyber-blue">{results.confidence}%</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col items-center space-y-3 pt-2">
+              <a href="/incidents" className="w-full flex h-10 items-center justify-center rounded bg-cyber-blue hover:bg-primary-hover text-[13px] font-bold text-[#03070b] transition-all duration-300">
+                View Full Investigation
+              </a>
+              {error && (
+                <p className="text-[10px] font-mono text-zinc-500">
+                  Status: {error}
                 </p>
-              </div>
-
-              {/* Incident Summary */}
-              <div className="mb-8 p-6 bg-zinc-900/30 rounded-lg border border-zinc-800">
-                <div className="flex items-start space-x-4">
-                  <div className="h-10 w-10 flex items-center justify-center rounded bg-primary/20 text-primary flex-shrink-0">
-                    🤖
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-white mb-1">Incident Investigation: Potential Credential Stuffing Attack</h4>
-                    <p className="text-zinc-400 text-sm">347 failed authentication attempts detected across 18 accounts</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Investigation Steps */}
-              <div className="space-y-4">
-                {investigationSteps.map(step => (
-                  <div key={step.id} className="flex items-start space-x-4 p-4 bg-zinc-900/20 rounded-lg border border-zinc-800/30 transition-all hover:border-zinc-700/50">
-                    <div className="h-10 w-10 flex items-center justify-center rounded-full flex-shrink-0">
-                      {step.status === 'complete' ? (
-                        <span className="text-green-500">✓</span>
-                      ) : step.status === 'in-progress' ? (
-                        <span className="text-yellow-500 animate-spin">⟳</span>
-                      ) : (
-                        <span className="text-zinc-500">○</span>
-                      )}
-                    </div>
-                    <div className="flex-1 space-y-1">
-                      <h4 className="font-medium text-white">{step.title}</h4>
-                      <p className="text-zinc-400 text-sm">{step.description}</p>
-                    </div>
-                    <div className="h-4 w-4 flex items-center justify-center">
-                      {step.status === 'complete' && (
-                        <span className="h-3 w-3 bg-green-500 rounded-full" />
-                      )}
-                      {step.status === 'in-progress' && (
-                        <span className="h-3 w-3 bg-yellow-500 rounded-full animate-ping" />
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Results Preview */}
-              <div className="mt-8 p-6 bg-zinc-900/30 rounded-lg border border-zinc-800">
-                <h4 className="font-semibold text-white mb-4">Investigation Results</h4>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <p className="text-zinc-400">Risk Score:</p>
-                    <p className="text-2xl font-bold text-red-500">{results.riskScore}/100</p>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-zinc-400">Severity:</p>
-                    <p className="text-2xl font-bold text-red-500">{results.severity}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-zinc-400">Likely Technique:</p>
-                    <p className="text-xl font-semibold text-blue-400">{results.technique}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-zinc-400">Confidence:</p>
-                    <p className="text-2xl font-bold text-blue-400">{results.confidence}%</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Button */}
-              <div className="mt-6 text-center">
-                <a href="/incidents" className="flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-white hover:bg-primary/90 transition-colors">
-                  View Full Investigation
-                </a>
-                {error && (
-                  <p className="mt-4 text-zinc-400 text-sm">
-                    {error}
-                  </p>
-                )}
-              </div>
+              )}
             </div>
           </div>
         </div>
@@ -368,107 +273,82 @@ export default function AIAnalyst() {
   }
 
   return (
-    <section className="relative z-10 pt-20 pb-24 bg-zinc-950">
-      <div className="relative">
-        <div className="absolute inset-0 -z-10">
-          <div className="relative h-[300px]">
-            <div className="absolute inset-0 bg-gradient-to-r from-zinc-900 via-zinc-950 to-zinc-900"></div>
-            <svg className="absolute inset-0 -z-10" width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
-              <defs>
-                <pattern id="circuit" width="20" height="20" patternUnits="userSpaceOnUse">
-                  <path d="M0,10 L20,10 M10,0 L10,20" stroke="rgba(0,189,212,0.03)" strokeWidth="0.5" />
-                </pattern>
-              </defs>
-              <rect width="100" height="100" fill="url(#circuit)" />
-            </svg>
+    <section className="relative z-10 pt-16 pb-20 bg-[#03070b] border-b border-panel-border">
+      <div className="max-w-4xl mx-auto px-6">
+        <div className="bg-panel rounded-lg border border-panel-border p-6 shadow-2xl space-y-6">
+          <div className="text-center space-y-2">
+            <span className="inline-flex items-center space-x-2 text-[10px] font-mono tracking-widest text-cyber-blue uppercase bg-cyber-blue-muted px-2.5 py-1 border border-cyber-blue/20 rounded">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyber-blue animate-pulse"></span>
+              <span>AI CO-PILOT SIMULATOR</span>
+            </span>
+            <h3 className="text-xl font-bold text-white tracking-tight">AI Security Analyst in Action</h3>
+            <p className="text-zinc-400 text-xs max-w-lg mx-auto">
+              Watch as the autonomous analyst correlates system signals, identifies attack sequences, and generates threat mitigation advice.
+            </p>
           </div>
-        </div>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="sr-only">AI Security Analyst</h2>
-          <div className="bg-zinc-900/50 backdrop-blur-sm rounded-xl border border-zinc-800/50 p-6">
-            <div className="mb-6">
-              <h3 className="text-xl font-semibold text-white mb-4">AI Security Analyst in Action</h3>
-              <p className="text-zinc-300 mb-4">
-                Watch as our AI analyst autonomously investigates a security incident, correlates evidence,
-                and provides actionable intelligence.
-              </p>
-            </div>
 
-            {/* Incident Summary */}
-            <div className="mb-8 p-6 bg-zinc-900/30 rounded-lg border border-zinc-800">
-              <div className="flex items-start space-x-4">
-                <div className="h-10 w-10 flex items-center justify-center rounded bg-primary/20 text-primary flex-shrink-0">
-                  🤖
+          {/* Incident Summary */}
+          <div className="p-4 bg-panel-header border border-panel-border rounded flex items-center space-x-3">
+            <div className="h-8 w-8 flex items-center justify-center rounded bg-cyber-blue-muted border border-cyber-blue/20 text-cyber-blue shrink-0">
+              <Cpu className="h-4 w-4" />
+            </div>
+            <div className="min-w-0">
+              <h4 className="font-bold text-white text-sm">Incident Investigation: Potential Credential Stuffing Attack</h4>
+              <p className="text-zinc-500 text-xs font-mono">347 failed authentication attempts detected across 18 accounts</p>
+            </div>
+          </div>
+
+          {/* Investigation Steps */}
+          <div className="space-y-2">
+            {investigationSteps.map(step => (
+              <div key={step.id} className="flex items-center justify-between p-3 bg-panel-header/50 border border-panel-border/30 rounded text-xs hover:border-panel-border transition-colors">
+                <div className="flex items-center space-x-3">
+                  {step.status === 'complete' ? (
+                    <span className="text-[10px] font-mono font-bold text-severity-low bg-severity-low/10 border border-severity-low/20 px-2 py-0.5 rounded">OK</span>
+                  ) : step.status === 'in-progress' ? (
+                    <span className="text-[10px] font-mono font-bold text-severity-high bg-severity-high/10 border border-severity-high/20 px-2 py-0.5 rounded animate-pulse">EXEC</span>
+                  ) : (
+                    <span className="text-[10px] font-mono font-bold text-zinc-500 bg-zinc-800/30 border border-zinc-700/20 px-2 py-0.5 rounded">WAIT</span>
+                  )}
+                  <span className="font-mono text-zinc-300">{step.title}</span>
                 </div>
-                <div>
-                  <h4 className="font-semibold text-white mb-1">Incident Investigation: Potential Credential Stuffing Attack</h4>
-                  <p className="text-zinc-400 text-sm">347 failed authentication attempts detected across 18 accounts</p>
-                </div>
+                <span className="text-[10px] font-mono text-zinc-500">[STEP-0{step.id}]</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Results Preview */}
+          <div className="p-4 bg-[#020508] border border-panel-border rounded space-y-3">
+            <h4 className="text-[10px] font-mono tracking-widest text-zinc-500 uppercase border-b border-panel-border/30 pb-1.5">INVESTIGATION RESULTS</h4>
+            <div className="grid gap-4 grid-cols-2 sm:grid-cols-4 text-xs font-mono">
+              <div className="space-y-1">
+                <p className="text-[10px] text-zinc-500">RISK INDEX</p>
+                <p className="text-lg font-bold text-severity-critical">{results.riskScore}/100</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] text-zinc-500">SEVERITY</p>
+                <p className="text-lg font-bold text-severity-critical">{results.severity}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] text-zinc-500">TECHNIQUE</p>
+                <p className="text-xs text-cyber-blue font-bold truncate">{results.technique}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] text-zinc-500">CONFIDENCE</p>
+                <p className="text-lg font-bold text-cyber-blue">{results.confidence}%</p>
               </div>
             </div>
+          </div>
 
-            {/* Investigation Steps */}
-            <div className="space-y-4">
-              {investigationSteps.map(step => (
-                <div key={step.id} className="flex items-start space-x-4 p-4 bg-zinc-900/20 rounded-lg border border-zinc-800/30 transition-all hover:border-zinc-700/50">
-                  <div className="h-10 w-10 flex items-center justify-center rounded-full flex-shrink-0">
-                    {step.status === 'complete' ? (
-                      <span className="text-green-500">✓</span>
-                    ) : step.status === 'in-progress' ? (
-                      <span className="text-yellow-500 animate-spin">⟳</span>
-                    ) : (
-                      <span className="text-zinc-500">○</span>
-                    )}
-                  </div>
-                  <div className="flex-1 space-y-1">
-                    <h4 className="font-medium text-white">{step.title}</h4>
-                    <p className="text-zinc-400 text-sm">{step.description}</p>
-                  </div>
-                  <div className="h-4 w-4 flex items-center justify-center">
-                    {step.status === 'complete' && (
-                      <span className="h-3 w-3 bg-green-500 rounded-full" />
-                    )}
-                    {step.status === 'in-progress' && (
-                      <span className="h-3 w-3 bg-yellow-500 rounded-full animate-ping" />
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Results Preview */}
-            <div className="mt-8 p-6 bg-zinc-900/30 rounded-lg border border-zinc-800">
-              <h4 className="font-semibold text-white mb-4">Investigation Results</h4>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <p className="text-zinc-400">Risk Score:</p>
-                  <p className="text-2xl font-bold text-red-500">{results.riskScore}/100</p>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-zinc-400">Severity:</p>
-                  <p className="text-2xl font-bold text-red-500">{results.severity}</p>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-zinc-400">Likely Technique:</p>
-                  <p className="text-xl font-semibold text-blue-400">{results.technique}</p>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-zinc-400">Confidence:</p>
-                  <p className="text-2xl font-bold text-blue-400">{results.confidence}%</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Action Button */}
-            <div className="mt-6 text-center">
-              <a href="/incidents" className="flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-white hover:bg-primary/90 transition-colors">
-                View Full Investigation
-              </a>
-            </div>
+          {/* Action Button */}
+          <div className="pt-2">
+            <a href="/incidents" className="flex h-10 items-center justify-center rounded bg-cyber-blue hover:bg-primary-hover text-[13px] font-bold text-[#03070b] transition-all duration-300">
+              View Full Investigation
+            </a>
           </div>
         </div>
       </div>
-      </section>
+    </section>
   );
 }
  

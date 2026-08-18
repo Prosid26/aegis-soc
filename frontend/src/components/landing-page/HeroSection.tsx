@@ -295,7 +295,6 @@ export default function HeroSection() {
       const dx = toNode.position[0] - fromNode.position[0];
       const dy = toNode.position[1] - fromNode.position[1];
       const dz = toNode.position[2] - fromNode.position[2];
-      const distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
 
       // Create line geometry
       const geometry = new THREE.BufferGeometry();
@@ -306,22 +305,15 @@ export default function HeroSection() {
       geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
       const material = new THREE.LineDashedMaterial({
-        color: 0x00bcd4,
-        dashSize: 0.2,
-        gapSize: 0.1,
+        color: 0x00e5ff,
+        dashSize: 0.25,
+        gapSize: 0.15,
         transparent: true,
-        opacity: 0.4
+        opacity: 0.35
       });
 
       const line = new THREE.Line(geometry, material);
       line.computeLineDistances();
-      line.position.set(midX, midY, midZ);
-
-      // Calculate rotation to align with connection
-      // We'll use a simple approach: look at the direction vector
-      line.lookAt(new THREE.Vector3(toNode.position[0], toNode.position[1], toNode.position[2]));
-      line.rotateX(Math.PI / 2); // Adjust for Three.js orientation
-
       linesRef.current.push(line);
     });
   }, []);
@@ -385,145 +377,162 @@ export default function HeroSection() {
   }, []);
 
   return (
-    <section className="relative min-h-[80vh] bg-zinc-950 overflow-hidden">
-      {/* Technical Background */}
-      <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22><rect width=%22100%22 height=%22100%22 fill=%22%23000000%22/><path d=%22M0 0 L100 100 M100 0 L0 100%22 stroke=%22rgba(255,255,255,0.02)%22 stroke-width=%221%22/></svg>')]"></div>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.01)_0%,rgba(0,0,0,0)_70%)]"></div>
+    <section className="relative min-h-[85vh] bg-[#03070b] overflow-hidden flex flex-col justify-center cyber-grid-dot border-b border-panel-border">
+      {/* Background radial gradient glow */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-cyber-blue/5 rounded-full filter blur-[120px]"></div>
       </div>
 
       {/* Hero Content */}
-      <div className="relative z-10 flex h-full w-full items-start">
+      <div className="relative z-10 max-w-7xl mx-auto px-6 py-12 md:py-20 w-full grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
         {/* Left Side: Copy and CTAs */}
-        <div className="flex-1 flex flex-col justify-center px-8 pb-12">
+        <div className="lg:col-span-5 flex flex-col justify-center space-y-6">
           <div className="space-y-4">
-            <p className="text-xs font-medium tracking-wider text-zinc-400">AEGIS SECURITY OPERATIONS</p>
-            <h1 className="text-3xl font-bold text-white md:text-4xl">
-              See the threat before it becomes the incident.
-            </h1>
-            <p className="text-zinc-300 max-w-xl">
-              AegisSOC correlates security telemetry, investigates suspicious behavior, and turns fragmented signals into actionable incidents.
-            </p>
-
-            <div className="mt-6 flex flex-col sm:flex-row gap-4">
-              <a href="/dashboard"
-                 className="flex h-12 w-full sm:w-auto items-center justify-center rounded-md bg-primary px-5 text-sm font-medium text-white hover:bg-primary/90 transition-colors border border-transparent">
-                Launch Security Console
-              </a>
-              <a href="/architecture"
-                 className="flex h-12 w-full sm:w-auto items-center justify-center rounded-md border border-zinc-700 px-5 text-sm font-medium text-zinc-200 hover:border-zinc-600 hover:bg-zinc-950 transition-colors">
-                Explore the Architecture
-              </a>
+            <div>
+              <span className="inline-flex items-center space-x-2 text-[10px] font-mono tracking-widest text-cyber-blue uppercase bg-cyber-blue-muted px-2.5 py-1 border border-cyber-blue/20 rounded">
+                <span className="w-1.5 h-1.5 rounded-full bg-cyber-blue animate-pulse"></span>
+                <span>AEGIS SOC PLATFORM</span>
+              </span>
             </div>
+            
+            <h1 className="text-4xl font-extrabold text-white md:text-5xl tracking-tight leading-none">
+              Autonomous threat intelligence & correlation.
+            </h1>
+            
+            <p className="text-zinc-400 text-base leading-relaxed max-w-lg">
+              AegisSOC correlates fragmented security telemetry, investigates suspicious behavior, and resolves attacks before they impact operations.
+            </p>
+          </div>
 
-            {/* Technical Trust Strip */}
-            <div className="mt-6 flex flex-col space-x-2 text-xs font-mono text-zinc-400">
-              <div className="flex flex-wrap gap-2">
-                <span>REAL-TIME TELEMETRY</span>
-                <span>AI INVESTIGATION</span>
-                <span>THREAT CORRELATION</span>
-                <span>MITRE ATT&CK</span>
-              </div>
+          <div className="flex flex-col sm:flex-row gap-3 pt-2">
+            <a href="/dashboard"
+               className="flex h-11 items-center justify-center rounded bg-cyber-blue hover:bg-primary-hover px-6 text-sm font-semibold text-[#03070b] hover:shadow-lg hover:shadow-cyber-blue/20 transition-all duration-300">
+              Launch Security Console
+            </a>
+            <a href="/architecture"
+               className="flex h-11 items-center justify-center rounded border border-panel-border bg-panel/50 px-6 text-sm font-semibold text-zinc-300 hover:border-zinc-700 hover:text-white transition-all duration-300 hover:bg-panel">
+              Explore Architecture
+            </a>
+          </div>
+
+          {/* Technical Trust Strip */}
+          <div className="border-t border-panel-border/50 pt-4 space-y-2">
+            <p className="text-[10px] font-mono text-zinc-500 tracking-wider">PLATFORM PROTOCOLS</p>
+            <div className="flex flex-wrap gap-2 text-[10px] font-mono text-zinc-400">
+              <span className="px-2 py-0.5 rounded bg-panel/80 border border-panel-border/30">REAL-TIME SIEM</span>
+              <span className="px-2 py-0.5 rounded bg-panel/80 border border-panel-border/30">MITRE ENGAGE</span>
+              <span className="px-2 py-0.5 rounded bg-panel/80 border border-panel-border/30">AI SECURITY CO-PILOT</span>
+              <span className="px-2 py-0.5 rounded bg-panel/80 border border-panel-border/30">XDR PIPELINE</span>
             </div>
           </div>
         </div>
 
         {/* Right Side: 3D Visualization and Panels */}
-        <div className="flex-1 flex flex-col">
-          <div className="relative w-full h-[500px] md:h-[600px]">
-            {/* 3D Security Graph */}
+        <div className="lg:col-span-7 flex flex-col relative w-full h-[550px] lg:h-[600px] bg-panel/20 rounded-lg border border-panel-border/40 overflow-hidden backdrop-blur-sm shadow-2xl">
+          {/* Cyber Scanline/Grid Overlay */}
+          <div className="absolute inset-0 pointer-events-none z-20 border border-panel-border/20 rounded-lg overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-b from-[#03070b]/20 via-transparent to-[#03070b]/50"></div>
+          </div>
+
+          {/* 3D Security Graph */}
+          {isClient && (
             <Canvas
-              style={{ position: 'absolute', inset: 0 }}
-              camera={{ position: [0, 0, 10], fov: 45 }}
+              style={{ position: 'absolute', inset: 0, zIndex: 1 }}
+              camera={{ position: [0, 0, 10], fov: 42 }}
             >
-              {/* Lights */}
-              <ambientLight intensity={0.3} />
-              <directionalLight intensity={0.5} position={[5, 5, 5]} castShadow />
+              <ambientLight intensity={0.5} />
+              <directionalLight intensity={0.8} position={[5, 8, 5]} />
 
               {/* Nodes */}
               {nodes.map(node => (
-                <g key={node.id}>
+                <group key={node.id} position={node.position}>
                   {node.type === 'server' && (
-                    <mesh
-                      geometry={new THREE.BoxGeometry(0.8, 0.8, 0.8)}
-                      material={new THREE.MeshStandardMaterial({
-                        color: node.critical ? '#ff3333' : '#00bcd4',
-                        metalness: 0.2,
-                        roughness: 0.5
-                      })}
-                    />
+                    <mesh>
+                      <boxGeometry args={[0.7, 0.7, 0.7]} />
+                      <meshStandardMaterial
+                        color={node.critical ? '#ef4444' : '#00e5ff'}
+                        metalness={0.8}
+                        roughness={0.2}
+                        emissive={node.critical ? '#ef4444' : '#00e5ff'}
+                        emissiveIntensity={0.2}
+                      />
+                    </mesh>
                   )}
                   {node.type === 'workstation' && (
-                    <mesh
-                      geometry={new THREE.BoxGeometry(0.6, 0.6, 0.6)}
-                      material={new THREE.MeshStandardMaterial({
-                        color: '#4caf50',
-                        metalness: 0.2,
-                        roughness: 0.5
-                      })}
-                    />
+                    <mesh>
+                      <boxGeometry args={[0.5, 0.5, 0.5]} />
+                      <meshStandardMaterial
+                        color="#10b981"
+                        metalness={0.6}
+                        roughness={0.3}
+                      />
+                    </mesh>
                   )}
                   {node.type === 'database' && (
-                    <mesh
-                      geometry={new THREE.SphereGeometry(0.5, 12, 12)}
-                      material={new THREE.MeshStandardMaterial({
-                        color: '#ff9800',
-                        metalness: 0.1,
-                        roughness: 0.6
-                      })}
-                    />
+                    <mesh>
+                      <sphereGeometry args={[0.45, 16, 16]} />
+                      <meshStandardMaterial
+                        color="#eab308"
+                        metalness={0.4}
+                        roughness={0.4}
+                        emissive="#eab308"
+                        emissiveIntensity={0.1}
+                      />
+                    </mesh>
                   )}
                   {node.type === 'firewall' && (
-                    <mesh
-                      geometry={new THREE.BoxGeometry(0.9, 0.3, 0.9)}
-                      material={new THREE.MeshStandardMaterial({
-                        color: '#9c27b0',
-                        metalness: 0.2,
-                        roughness: 0.4
-                      })}
-                    />
+                    <mesh>
+                      <boxGeometry args={[0.8, 0.25, 0.8]} />
+                      <meshStandardMaterial
+                        color="#a855f7"
+                        metalness={0.7}
+                        roughness={0.2}
+                      />
+                    </mesh>
                   )}
                   {node.type === 'router' && (
-                    <mesh
-                      geometry={new THREE.BoxGeometry(0.7, 0.7, 0.2)}
-                      material={new THREE.MeshStandardMaterial({
-                        color: '#607d8b',
-                        metalness: 0.2,
-                        roughness: 0.5
-                      })}
-                    />
+                    <mesh>
+                      <boxGeometry args={[0.6, 0.6, 0.15]} />
+                      <meshStandardMaterial
+                        color="#64748b"
+                        metalness={0.8}
+                        roughness={0.2}
+                      />
+                    </mesh>
                   )}
                   {node.type === 'endpoint' && (
-                    <mesh
-                      geometry={new THREE.SphereGeometry(0.4, 8, 8)}
-                      material={new THREE.MeshStandardMaterial({
-                        color: '#2196f3',
-                        metalness: 0.1,
-                        roughness: 0.7
-                      })}
-                    />
+                    <mesh>
+                      <sphereGeometry args={[0.35, 12, 12]} />
+                      <meshStandardMaterial
+                        color="#0284c7"
+                        metalness={0.5}
+                        roughness={0.4}
+                      />
+                    </mesh>
                   )}
                   {node.type === 'external' && (
-                    <mesh
-                      geometry={new THREE.SphereGeometry(0.3, 8, 8)}
-                      material={new THREE.MeshStandardMaterial({
-                        color: '#f44336',
-                        metalness: 0.3,
-                        roughness: 0.4
-                      })}
-                    />
+                    <mesh>
+                      <sphereGeometry args={[0.3, 12, 12]} />
+                      <meshStandardMaterial
+                        color="#ef4444"
+                        metalness={0.9}
+                        roughness={0.1}
+                        emissive="#ef4444"
+                        emissiveIntensity={0.4}
+                      />
+                    </mesh>
                   )}
                   {node.type === 'auth' && (
-                    <mesh
-                      geometry={new THREE.CylinderGeometry(0.4, 0.6, 8)}
-                      material={new THREE.MeshStandardMaterial({
-                        color: '#ff9800',
-                        metalness: 0.2,
-                        roughness: 0.5
-                      })}
-                    />
+                    <mesh>
+                      <cylinderGeometry args={[0.3, 0.45, 0.7, 12]} />
+                      <meshStandardMaterial
+                        color="#f97316"
+                        metalness={0.5}
+                        roughness={0.3}
+                      />
+                    </mesh>
                   )}
-                </g>
+                </group>
               ))}
 
               {/* Connections (Lines) */}
@@ -536,73 +545,72 @@ export default function HeroSection() {
                 <primitive key={index} object={packet} />
               ))}
             </Canvas>
+          )}
 
-            {/* Incident Panel */}
-            <div className="absolute right-4 top-4 w-[280px] bg-zinc-900/80 backdrop-blur-sm border border-zinc-800/50 p-4">
-              <div className="flex items-start space-x-3">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 flex items-center justify-center bg-red-600 text-white text-xs font-bold rounded">
-                    !
-                  </div>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-zinc-300">ACTIVE INCIDENT</p>
-                  <p className="text-white font-semibold">{incident.title}</p>
-                  <div className="mt-2 space-y-1 text-xs font-mono">
-                    <div className="flex justify-between">
-                      <span>Risk Score</span>
-                      <span className="font-bold">{incident.riskScore}/100</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Affected Assets</span>
-                      <span>{incident.affectedAssets}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Events</span>
-                      <span>{incident.eventCount}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Technique</span>
-                      <span className="whitespace-nowrap">{incident.technique}</span>
-                    </div>
-                  </div>
+          {/* Incident Panel overlay */}
+          <div className="absolute right-4 top-4 w-[280px] bg-panel/90 backdrop-blur-md border border-panel-border p-4 z-10 shadow-2xl rounded">
+            <div className="flex items-start space-x-3">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 flex items-center justify-center bg-severity-critical/20 border border-severity-critical/30 text-severity-critical text-xs font-bold rounded animate-pulse">
+                  ⚠
                 </div>
               </div>
-            </div>
-
-            {/* SOC Console */}
-            <div className="absolute left-4 bottom-4 w-[320px] max-h-[200px] bg-black/50 backdrop-blur border border-zinc-800/30 p-3 overflow-hidden">
-              <div className="text-xs font-mono text-green-400">
-                {socLogs.map((log, index) => (
-                  <div key={index} className="flex items-start space-x-2 mb-1">
-                    <span className="text-zinc-500">[{(log.timestamp)}]</span>
-                    <span>{log.message}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-mono tracking-widest text-zinc-500">ACTIVE DETECTED IMPACT</p>
+                <p className="text-zinc-100 font-bold text-sm truncate">{incident.title}</p>
+                <div className="mt-2 space-y-1.5 text-[11px] font-mono text-zinc-400">
+                  <div className="flex justify-between border-b border-panel-border/30 pb-0.5">
+                    <span>Risk Score</span>
+                    <span className="font-bold text-severity-critical">{incident.riskScore}/100</span>
                   </div>
-                ))}
-
-                {/* Cursor blink effect */}
-                <div className="mt-2 h-0.5 w-4 bg-green-400 animate-blink" />
+                  <div className="flex justify-between border-b border-panel-border/30 pb-0.5">
+                    <span>Affected Assets</span>
+                    <span className="text-zinc-200">{incident.affectedAssets}</span>
+                  </div>
+                  <div className="flex justify-between border-b border-panel-border/30 pb-0.5">
+                    <span>Events Correlated</span>
+                    <span className="text-zinc-200">{incident.eventCount}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>MITRE Technique</span>
+                    <span className="text-cyber-blue truncate max-w-[140px]">{incident.technique.split(' — ')[0]}</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
+          {/* SOC Console overlay */}
+          <div className="absolute left-4 bottom-4 w-[320px] max-h-[170px] bg-panel/95 backdrop-blur-md border border-panel-border p-3 overflow-hidden z-10 shadow-2xl rounded">
+            <div className="text-[11px] font-mono text-severity-low">
+              {socLogs.map((log, index) => (
+                <div key={index} className="flex items-start space-x-2 mb-1">
+                  <span className="text-zinc-600 font-semibold">[{log.timestamp}]</span>
+                  <span className="text-zinc-300">{log.message}</span>
+                </div>
+              ))}
+              <div className="mt-1 h-0.5 w-3 bg-severity-low animate-pulse" />
+            </div>
+          </div>
+
           {/* Live Telemetry Strip */}
-          <div className="relative mt-4 h-12 bg-black/60 backdrop-blur-sm border-t border-zinc-800/50 px-4">
-            <div className="flex h-full items-center justify-between text-xs font-mono">
-              <span className="text-zinc-400">EVENT STREAM</span>
-              <div className="flex-1 flex overflow-x-hidden whitespace-nowrap">
-                {telemetry.map((event, index) => (
-                  <div key={index} className="flex items-center space-x-2">
-                    <span className="text-zinc-500">{event.time}</span>
-                    <span
-                      className={`px-2 py-0.5 rounded text-xs font-medium ${event.className}`}
-                    >
-                      {event.type}
-                    </span>
-                    <span className="flex-1 text-left">{event.detail}</span>
-                  </div>
-                ))}
-              </div>
+          <div className="absolute bottom-0 inset-x-0 h-11 bg-panel-header border-t border-panel-border px-4 flex items-center justify-between text-[11px] font-mono z-10">
+            <span className="text-zinc-500 font-bold tracking-wider shrink-0 mr-3">CORRELATOR FEED</span>
+            <div className="flex-1 flex overflow-hidden whitespace-nowrap space-x-6">
+              {telemetry.map((event, index) => (
+                <div key={index} className="flex items-center space-x-2 shrink-0">
+                  <span className="text-zinc-600">[{event.time}]</span>
+                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                    event.className.includes('text-red') ? 'bg-severity-critical/10 text-severity-critical' :
+                    event.className.includes('text-orange') ? 'bg-severity-high/10 text-severity-high' :
+                    event.className.includes('text-purple') ? 'bg-purple-500/10 text-purple-400' :
+                    'bg-cyber-blue/10 text-cyber-blue'
+                  }`}>
+                    {event.type}
+                  </span>
+                  <span className="text-zinc-400">{event.detail}</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>

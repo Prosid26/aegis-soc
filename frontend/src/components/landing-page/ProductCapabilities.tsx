@@ -1,3 +1,7 @@
+'use client';
+
+import { Zap, Brain, Shield, Headset, Map, BarChart3 } from 'lucide-react';
+
 export default function ProductCapabilities() {
   const capabilities = [
     {
@@ -68,62 +72,60 @@ export default function ProductCapabilities() {
     }
   ];
 
+  const getIconComponent = (iconName: string) => {
+    const iconProps = { className: "h-5 w-5 text-cyber-blue shrink-0" };
+    switch (iconName) {
+      case 'Zap': return <Zap {...iconProps} />;
+      case 'Brain': return <Brain {...iconProps} />;
+      case 'Shield': return <Shield {...iconProps} />;
+      case 'Headset': return <Headset {...iconProps} />;
+      case 'Map': return <Map {...iconProps} />;
+      case 'BarChart3': return <BarChart3 {...iconProps} />;
+      default: return <Shield {...iconProps} />;
+    }
+  };
+
   return (
-    <section className="relative z-10 pt-20 pb-24 bg-zinc-950">
-      <div className="relative">
-        <div className="absolute inset-0 -z-10">
-          <div className="relative h-[300px]">
-            <div className="absolute inset-0 bg-gradient-to-r from-zinc-900 via-zinc-950 to-zinc-900"></div>
-            <svg className="absolute inset-0 -z-10" width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
-              <defs>
-                <pattern id="noise" width="100" height="100" patternUnits="userSpaceOnUse">
-                  <rect width="100" height="100" fill="url(#image)" />
-                </pattern>
-                <image id="image" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIj48ZyBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IiAwLjA1Ij48cmVjdCB3aWR0aD0iMSIgaGVpZ2h0PSIxIj48L3JlY3Q+PHJlY3QgeD0iMiIgeT0iMCIgd2lkdGg9IjEiIGhlaWdodD0iMSI+PC9yZWN0PjxyZWN0IHg9IjQiIHk9IjAiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiPjwvcmVjdD48cmVzdCB4PSI2IiB5PSIwIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIj48L3JlY3Q+PHJlY3QgeD0iOCIgeT0iMCIgd2lkdGg9IjEiIGhlaWdodD0iMSI+PC9yZWN0PjxyZWN0IHg9IjEwIiB5PSIwIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIj48L3JlY3Q+PHJlY3QgeD0iMTIiIHk9IjAiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiPjwvcmVzdD48cmVzdCB4PSIxNCIgeT0iMCIgd2lkdGg9IjEiIGhlaWdodD0iMSI+PC9yZWN0PjxyZWN0IHg9IjE2IiB5PSIwIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIj48L3JlY3Q+PHJlY3QgeD0iMTgiIHk9IjAiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiPjwvcmVzdD48cmVzdCB4PSIyMCIgeT0iMCIgd2lkdGg9IjEiIGhlaWdodD0iMSI+PC9yZWN0PjxyZWN0IHg9IjIyIiB5PSIwIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIj48L3JlY3Q+PHJlY3QgeD0iMjQiIHk9IjAiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiPjwvcmVzdD48cmVzdCB4PSIyNiIgeT0iMCIgd2lkdGg9IjEiIGhlaWdodD0iMSI+PC9yZWN0PjxyZWN0IHg9IjI4IiB5PSIwIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIj48L3JlY3Q+PHJlY3QgeD0iMzAiIHk9IjAiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiPjwvcmVzdD48cmVzdCB4PSIzMiB5PSIwIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIj48L3JlY3Q+PHJlY3QgeD0iMzQiIHk9IjAiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiPjwvcmVzdD48cmVzdCB4PSIzNiB5PSIwIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIj48L3JlY3Q+PHJlY3QgeD0iMzgiIHk9IjAiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiPjwvcmVzdD48cmVzdCB4PSI0MCIgeT0iMCIgd2lkdGg9IjEiIGhlaWdodD0iMSI+PC9yZWN0PjxyZWN0IHg9IjQyIiB5PSIwIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIj48L3JlY3Q+PHJlY3QgeD0iNDQiIHk9IjAiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiPjwvcmVzdD48cmVzdCB4PSI0NiB5PSIwIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIj48L3JlY3Q+PHJlY3QgeD0iNDgiIHk9IjAiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiPjwvcmVzdD48cmVzdCB4PSI1MCIgeT0iMCIgd2lkdGg9IjEiIGhlaWdodD0iMSI+PC9yZWN0PjxyZWN0IHg9IjUyIiB5PSIwIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIj48L3JlY3Q+PHJlY3QgeD0iNTQiIHk9IjAiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiPjwvcmVzdD48cmVzdCB4PSI1NiB5PSIwIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIj48L3JlY3Q+PHJlY3QgeD0iNTgiIHk9IjAiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiPjwvcmVzdD48cmVzdCB4PSI2MCIgeT0iMCIgd2lkdGg9IjEiIGhlaWdodD0iMSI+PC9yZWN0Pg==" />
-              </defs>
-              <rect width="100" height="100" fill="url(#noise)" />
-            </svg>
-          </div>
+    <section className="relative z-10 pt-20 pb-24 bg-[#03070b] border-b border-panel-border">
+      <div className="max-w-6xl mx-auto px-6">
+        <div className="text-center mb-16 space-y-3">
+          <span className="inline-flex items-center space-x-2 text-[10px] font-mono tracking-widest text-cyber-blue uppercase bg-cyber-blue-muted px-2.5 py-1 border border-cyber-blue/20 rounded">
+            CORE PLATFORM
+          </span>
+          <h2 className="text-3xl font-extrabold text-white tracking-tight md:text-4xl">
+            Designed for Modern Security Operations
+          </h2>
+          <p className="text-zinc-400 text-sm max-w-xl mx-auto leading-relaxed">
+            AegisSOC combines real-time SIEM, automated playbook response, and AI-driven mapping into a singular command workspace.
+          </p>
         </div>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="sr-only">Product Capabilities</h2>
-          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {capabilities.map((cap, index) => (
-              <div key={index} className="bg-zinc-900/50 backdrop-blur-sm rounded-xl border border-zinc-800/50 p-6 hover:border-zinc-700/70 transition-colors">
-                <div className="flex h-10 w-10 items-center justify-center rounded bg-primary/10 text-primary mb-4">
-                  {/* Using Lucide icons - we'll map the icon name to the actual component */}
-                  <span className="text-xl">{getIcon(cap.icon)}</span>
+
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {capabilities.map((cap, index) => (
+            <div 
+              key={index} 
+              className="bg-panel border border-panel-border p-6 rounded-lg transition-all duration-300 hover:border-cyber-blue/25 hover:cyber-glow-blue flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex h-10 w-10 items-center justify-center rounded bg-cyber-blue-muted border border-cyber-blue/20 mb-5">
+                  {getIconComponent(cap.icon)}
                 </div>
-                <h3 className="text-xl font-semibold text-white mb-3">{cap.title}</h3>
-                <p className="text-zinc-300 mb-4">{cap.description}</p>
-                <ul className="space-y-2 text-zinc-400 text-sm">
-                  {cap.features.map((feature, idx) => (
-                    <li key={idx} className="flex items-start space-x-2">
-                      <span className="flex h-3 w-3 items-center justify-center rounded-sm bg-primary/20 text-primary shrink-0">
-                        +
-                      </span>
-                      <span>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
+                <h3 className="text-lg font-bold text-white mb-2 tracking-tight">{cap.title}</h3>
+                <p className="text-zinc-400 text-xs leading-relaxed mb-6">{cap.description}</p>
               </div>
-            ))}
-          </div>
+              
+              <ul className="space-y-2 border-t border-panel-border/30 pt-4 text-xs font-mono text-zinc-500">
+                {cap.features.map((feature, idx) => (
+                  <li key={idx} className="flex items-center space-x-2">
+                    <span className="h-1 w-1 bg-cyber-blue rounded-full shrink-0"></span>
+                    <span className="text-zinc-400">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
       </div>
     </section>
   );
-}
-
-// Helper function to return icon text (in a real app, we'd use Lucide icons)
-function getIcon(iconName: string): string {
-  const iconMap: Record<string, string> = {
-    Zap: '⚡',
-    Brain: '🧠',
-    Shield: '🛡️',
-    Headset: '🎧',
-    Map: '🗺️',
-    BarChart3: '📊'
-  };
-  return iconMap[iconName] || '•';
 }

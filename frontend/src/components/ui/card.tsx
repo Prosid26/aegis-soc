@@ -8,10 +8,16 @@ interface CardProps {
 
 export const Card = ({ className = '', children, onClick }: CardProps) => {
   return (
-    <div className={`bg-zinc-900/50 backdrop-blur-sm rounded-xl border border-zinc-800/50 p-6 ${className}`} onClick={onClick}>
+    <div 
+      className={`bg-panel backdrop-blur-md rounded-lg border border-panel-border p-5 shadow-2xl transition-all duration-300 ease-out ${
+        onClick ? 'cursor-pointer hover:border-cyber-blue/30 hover:bg-panel/80 hover:cyber-glow-blue' : ''
+      } ${className}`} 
+      onClick={onClick}
+    >
       {children}
     </div>
   );
 };
 
 Card.displayName = 'Card';
+

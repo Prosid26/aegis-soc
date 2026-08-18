@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from typing import Dict, Any
 from app.db.session import get_db
@@ -6,11 +6,14 @@ from app.models.incident import Incident
 from app.core.deps import get_current_active_user
 from app.models.user import User
 from app.services.ai_analyst import AIAnalystService
+from app.core.rate_limiting import limiter
 
 router = APIRouter()
 
 @router.post("/incidents/{incident_id}/analyze")
+@limiter.limit("10/minute")
 async def analyze_incident(
+    request: Request,
     incident_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -41,7 +44,9 @@ async def analyze_incident(
 
 # Keep the other endpoints for event investigation and threat hunting as they were
 @router.post("/investigate-event/{event_id}")
+@limiter.limit("10/minute")
 async def investigate_event(
+    request: Request,
     event_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -63,7 +68,9 @@ async def investigate_event(
     }
 
 @router.get("/threat-hunting")
+@limiter.limit("10/minute")
 async def threat_hunting_query(
+    request: Request,
     query: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),

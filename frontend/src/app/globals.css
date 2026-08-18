@@ -1,26 +1,112 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  /* Premium Dark Console Palette */
+  --color-background: #03070b;
+  --color-foreground: #f3f4f6;
+  
+  --color-panel: #070b0f;
+  --color-panel-header: #0b1016;
+  --color-panel-border: #131920;
+  
+  /* Cyber Security Alerts / Status Accents */
+  --color-cyber-blue: #00e5ff;
+  --color-cyber-blue-muted: rgba(0, 229, 255, 0.1);
+  
+  --color-severity-critical: #ef4444;
+  --color-severity-critical-muted: rgba(239, 68, 68, 0.12);
+  
+  --color-severity-high: #f97316;
+  --color-severity-high-muted: rgba(249, 115, 22, 0.12);
+  
+  --color-severity-medium: #eab308;
+  --color-severity-medium-muted: rgba(234, 179, 8, 0.12);
+  
+  --color-severity-low: #10b981;
+  --color-severity-low-muted: rgba(16, 185, 129, 0.12);
+
+  --color-info-text: #f3f4f6;
+  --color-metadata: #9ca3af;
+  
+  /* Primary theme color used in layout (mapped as primary) */
+  --color-primary: #00e5ff;
+  --color-primary-hover: #00b8cc;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* Base Body settings */
+body {
+  background-color: #03070b;
+  color: #f3f4f6;
+  font-family: var(--font-sans);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Selection */
+::selection {
+  background-color: rgba(0, 229, 255, 0.25);
+  color: #ffffff;
+}
+
+/* Monospace font settings override */
+.font-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  letter-spacing: -0.025em;
+}
+
+/* Custom cyber-console styling helpers */
+.cyber-grid-dot {
+  background-size: 20px 20px;
+  background-image: radial-gradient(circle, rgba(0, 229, 255, 0.035) 1px, transparent 1px);
+}
+
+.cyber-glow-blue {
+  box-shadow: 0 0 15px rgba(0, 229, 255, 0.08);
+}
+
+.cyber-glow-red {
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.12);
+}
+
+/* Threat level pulse */
+@keyframes threat-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+.animate-threat-pulse {
+  animation: threat-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes scanline {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+.cyber-scanline {
+  position: relative;
+  overflow: hidden;
+}
+
+.cyber-scanline::after {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%), linear-gradient(90deg, rgba(0, 229, 255, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 229, 255, 0.02));
+  z-index: 2;
+  background-size: 100% 2px, 3px 100%;
+  pointer-events: none;
 }

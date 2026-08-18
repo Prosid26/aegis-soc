@@ -1,92 +1,570 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { Card } from '@/components/ui/card';
 import { Stat } from '@/components/ui/stat';
 import { apiClient } from '@/lib/api';
 import { authUtils } from '@/lib/api';
+import { 
+  ShieldAlert, 
+  Activity, 
+  AlertTriangle, 
+  Radio, 
+  CheckCircle, 
+  AlertCircle, 
+  Clock, 
+  Server, 
+  User, 
+  Bell, 
+  RefreshCw, 
+  Terminal, 
+  Network,
+  Cpu
+} from 'lucide-react';
 
-export default function Dashboard() {
-  const [stats, setStats] = useState({
-    eventsPerMinute: 0,
-    activeIncidents: 0,
-    criticalAssets: 0,
-    threatLevel: 'LOW'
+const ThreatGraph = dynamic(() => import('@/components/3d/ThreatGraph'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex flex-col items-center justify-center h-full text-zinc-500 font-mono text-[10px] space-y-2">
+      <RefreshCw className="h-6 w-6 animate-spin text-cyber-blue" />
+      <span>COMPILING WORKSTATION MODEL...</span>
+    </div>
+  )
+});
+
+// Components for the SOC dashboard
+const ThreatLevelIndicator = ({ level }: { level: string }) => {
+  const getThreatLevelProps = (level: string) => {
+    switch (level.toUpperCase()) {
+      case 'CRITICAL':
+        return {
+          label: 'CRITICAL STATE',
+          bg: 'bg-severity-critical-muted',
+          text: 'text-severity-critical',
+          border: 'border-severity-critical/30',
+          pulse: 'animate-threat-pulse'
+        };
+      case 'HIGH':
+        return {
+          label: 'HIGH ALERT',
+          bg: 'bg-severity-high-muted',
+          text: 'text-severity-high',
+          border: 'border-severity-high/30',
+          pulse: ''
+        };
+      case 'ELEVATED':
+        return {
+          label: 'ELEVATED STATUS',
+          bg: 'bg-severity-medium-muted',
+          text: 'text-severity-medium',
+          border: 'border-severity-medium/30',
+          pulse: ''
+        };
+      case 'GUARDED':
+        return {
+          label: 'GUARDED WATCH',
+          bg: 'bg-severity-medium-muted/50',
+          text: 'text-severity-medium',
+          border: 'border-severity-medium/20',
+          pulse: ''
+        };
+      default:
+        return {
+          label: 'SECURE MONITORING',
+          bg: 'bg-severity-low-muted',
+          text: 'text-severity-low',
+          border: 'border-severity-low/30',
+          pulse: ''
+        };
+    }
+  };
+
+  const props = getThreatLevelProps(level);
+
+  return (
+    <div className={`flex items-center justify-between p-4 ${props.bg} rounded border ${props.border} transition-all duration-500`}>
+      <div className="space-y-1">
+        <h4 className="text-[10px] font-mono tracking-widest text-zinc-500 uppercase">GLOBAL OPERATIONS THREAT STATE</h4>
+        <div className="flex items-center space-x-3">
+          <span className={`text-2xl font-bold tracking-tight font-mono ${props.text} ${props.pulse}`}>
+            {props.label}
+          </span>
+        </div>
+      </div>
+      <div className="text-[10px] font-mono text-zinc-500 max-w-[200px] text-right hidden sm:block">
+        Deterministic telemetry correlation and sensor assessment model active.
+      </div>
+    </div>
+  );
+};
+
+const SecurityMetrics = ({ metrics }: { metrics: any }) => {
+  return (
+    <div className="grid grid-cols-2 gap-4">
+      <Stat
+        title="Events/Min"
+        value={metrics.eventsPerMinute}
+        trend={metrics.eventsPerMinute > 50 ? 'up' : 'neutral'}
+        trendValue={Math.max(0, metrics.eventsPerMinute - 25)}
+        description="Core signal intake speed"
+      />
+      <Stat
+        title="Active Incidents"
+        value={metrics.activeIncidents}
+        trend={metrics.activeIncidents > 0 ? 'up' : 'neutral'}
+        trendValue={metrics.activeIncidents}
+        description="Cases open in queue"
+      />
+      <Stat
+        title="Critical Incidents"
+        value={metrics.criticalIncidents}
+        trend={metrics.criticalIncidents > 0 ? 'up' : 'neutral'}
+        trendValue={metrics.criticalIncidents}
+        description="Immediate actions required"
+      />
+      <Stat
+        title="Detections Run"
+        value={metrics.detectionCount}
+        trend="neutral"
+        trendValue={0}
+        description="Detections compiled"
+      />
+      <Stat
+        title="Avg Risk Score"
+        value={metrics.avgRiskScore?.toFixed(1) || '0'}
+        trend={metrics.avgRiskScore && metrics.avgRiskScore > 50 ? 'up' : 'neutral'}
+        trendValue={0}
+        description="Deterministic threat mean"
+      />
+      <Stat
+        title="High Risk Detections"
+        value={metrics.highRiskDetections}
+        trend={metrics.highRiskDetections > 0 ? 'up' : 'neutral'}
+        trendValue={metrics.highRiskDetections}
+        description="Risk thresholds > 70"
+      />
+    </div>
+  );
+};
+
+const LiveEventStream = ({ events }: { events: any[] }) => {
+  return (
+    <div className="space-y-2 overflow-y-auto max-h-[460px] pr-1">
+      {events.length > 0 ? (
+        events.map((event, index) => {
+          const isCritical = event.severity === 'high' || event.severity === 'critical';
+          const isMedium = event.severity === 'medium';
+          
+          return (
+            <div
+              key={event.id || index}
+              className={`flex items-start space-x-3 p-3 bg-panel-header/35 border border-panel-border/30 rounded hover:border-panel-border transition-all duration-300 font-mono text-xs`}
+            >
+              <div className={`h-6 w-6 rounded flex items-center justify-center shrink-0 text-[10px] font-bold ${
+                isCritical ? 'bg-severity-critical/10 text-severity-critical border border-severity-critical/20' :
+                isMedium ? 'bg-severity-high/10 text-severity-high border border-severity-high/20' :
+                'bg-cyber-blue-muted text-cyber-blue border border-cyber-blue/15'
+              }`}>
+                EV
+              </div>
+              <div className="flex-1 min-w-0 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-zinc-200 uppercase truncate pr-2">{event.event_type || 'UNKNOWN_SIG'}</span>
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${
+                    isCritical ? 'bg-severity-critical/10 text-severity-critical border border-severity-critical/20' :
+                    isMedium ? 'bg-severity-high/10 text-severity-high border border-severity-high/20' :
+                    'bg-severity-low-muted text-severity-low border border-severity-low/20'
+                  }`}>
+                    {event.severity?.toUpperCase() || 'LOW'}
+                  </span>
+                </div>
+                
+                <p className="text-zinc-400 text-[11px] truncate">
+                  {event.source_ip} <span className="text-zinc-600">→</span> {event.destination_ip || 'INTERNAL'}
+                  {event.user ? ` [${event.user}]` : ''}
+                </p>
+                
+                <div className="flex items-center justify-between text-[10px] text-zinc-500 pt-0.5">
+                  <span className="truncate max-w-[150px]">{event.asset || 'unknown_endpoint'}</span>
+                  <span className="text-zinc-600 flex items-center">
+                    <Clock className="h-3 w-3 mr-0.5 shrink-0" />
+                    {new Date(event.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        })
+      ) : (
+        <div className="text-center py-12 text-zinc-500 font-mono text-xs">
+          [NO TELEMETRY LOGGED IN FEED]
+        </div>
+      )}
+    </div>
+  );
+};
+
+type NodeType = 'server' | 'workstation' | 'database' | 'firewall' | 'router' | 'endpoint' | 'external' | 'auth';
+type Node = {
+  id: string;
+  label: string;
+  position: [number, number, number];
+  type: NodeType;
+  critical?: boolean;
+  warning?: boolean;
+};
+
+const ThreatActivityViz = ({ events, incidents }: { events: any[]; incidents: any[] }) => {
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+
+  const sourceIPs = [...new Set(events.map((e: any) => e.source_ip).filter(Boolean))].slice(0, 4);
+  const assets = [...new Set(incidents.flatMap((i: any) => i.affected_assets || []).filter(Boolean))].slice(0, 4);
+
+  const centralNode: Node = { id: 'central_core', label: 'AEGIS-CORE', position: [0, 0, 0], type: 'router' };
+  
+  const sourceNodes: Node[] = sourceIPs.map((ip, idx) => ({
+    id: `src-${ip}`,
+    label: ip,
+    position: [
+      -4.0 - Math.sin(idx * 0.8) * 1.2,
+      1.2 - (idx * 0.9),
+      -0.8 + idx * 0.4
+    ] as [number, number, number],
+    type: 'external',
+    critical: true
+  }));
+
+  const assetNodes: Node[] = assets.map((asset, idx) => ({
+    id: `asset-${asset}`,
+    label: `ASSET-${asset}`,
+    position: [
+      4.0 + Math.sin(idx * 0.8) * 1.2,
+      1.2 - (idx * 0.9),
+      -0.8 - idx * 0.4
+    ] as [number, number, number],
+    type: (idx % 2 === 0 ? 'database' : 'server') as NodeType,
+    warning: true
+  }));
+
+  const nodes: Node[] = [centralNode, ...sourceNodes, ...assetNodes];
+
+  const connections = [
+    ...sourceNodes.map(sn => ({ from: sn.id, to: 'central_core' })),
+    ...assetNodes.map(an => ({ from: 'central_core', to: an.id }))
+  ];
+
+  const selectedNode = nodes.find(n => n.id === selectedNodeId);
+
+  return (
+    <div className="relative h-64 bg-[#020508]/85 rounded border border-panel-border/40 overflow-hidden flex flex-col justify-end">
+      {/* 3D WebGL Threat Graph */}
+      <div className="absolute inset-0 z-0">
+        <ThreatGraph
+          nodes={nodes}
+          connections={connections}
+          selectedNodeId={selectedNodeId}
+          onNodeSelect={setSelectedNodeId}
+          threatsActive={incidents.length > 0}
+        />
+      </div>
+
+      {/* Mini details HUD overlay */}
+      {selectedNode && (
+        <div className="absolute left-3 top-3 bg-[#03070b]/90 border border-panel-border/80 p-3 rounded shadow-2xl font-mono text-[9px] text-zinc-300 w-48 space-y-1.5 backdrop-blur-sm z-10 select-none">
+          <div className="flex justify-between border-b border-panel-border/30 pb-1">
+            <span className="text-zinc-500 uppercase">IP/ID</span>
+            <span className="font-bold text-white truncate max-w-[100px]">{selectedNode.label}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-zinc-500">CLASS</span>
+            <span className="text-cyber-blue font-bold uppercase">{selectedNode.type}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-zinc-500">STATUS</span>
+            <span className={selectedNode.critical ? 'text-severity-critical font-bold' : selectedNode.warning ? 'text-severity-high font-bold' : 'text-severity-low font-bold'}>
+              {selectedNode.critical ? 'COMPROMISED' : selectedNode.warning ? 'SUSPICIOUS' : 'SECURED'}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Tactical overlay */}
+      <div className="absolute right-3 bottom-3 pointer-events-none z-10 text-[8px] font-mono text-zinc-600 bg-[#03070b]/40 px-2 py-0.5 rounded">
+        DRAG TO ORBIT / SCROLL TO ZOOM
+      </div>
+    </div>
+  );
+};
+
+const IncidentPriorityPanel = ({ incidents }: { incidents: any[] }) => {
+  const sortedIncidents = [...incidents].sort((a, b) =>
+    (b.risk_score || 0) - (a.risk_score || 0)
+  ).slice(0, 4);
+
+  return (
+    <div className="space-y-3 font-mono text-xs">
+      {sortedIncidents.length > 0 ? (
+        sortedIncidents.map((incident, index) => {
+          const isCritical = incident.severity === 'critical';
+          const isHigh = incident.severity === 'high';
+          const indicatorColor = isCritical ? 'bg-severity-critical text-severity-critical' : isHigh ? 'bg-severity-high text-severity-high' : 'bg-severity-medium text-severity-medium';
+
+          return (
+            <div
+              key={incident.id || index}
+              onClick={() => window.location.href = `/incidents/${incident.id}`}
+              className={`flex items-start space-x-3 p-3 bg-panel-header/35 border border-panel-border/30 hover:border-cyber-blue/30 rounded cursor-pointer transition-all duration-300 ${
+                index === 0 ? 'border-l-2 border-l-severity-critical' : ''
+              }`}
+            >
+              <div className={`h-6 w-6 rounded flex items-center justify-center shrink-0 font-bold ${
+                isCritical ? 'bg-severity-critical/10 text-severity-critical' :
+                isHigh ? 'bg-severity-high/10 text-severity-high' :
+                'bg-severity-medium/10 text-severity-medium'
+              }`}>
+                #{index + 1}
+              </div>
+              <div className="flex-1 min-w-0 space-y-1">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-zinc-200 truncate pr-2">{incident.title || 'UNTITLED INCIDENT'}</h4>
+                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                    isCritical ? 'bg-severity-critical/10 text-severity-critical' :
+                    isHigh ? 'bg-severity-high/10 text-severity-high' :
+                    'bg-severity-medium/10 text-severity-medium'
+                  }`}>
+                    {incident.severity?.toUpperCase() || 'LOW'}
+                  </span>
+                </div>
+                
+                <p className="text-zinc-400 text-[11px] truncate">
+                  {incident.description || 'No case logs registered.'}
+                </p>
+                
+                <div className="flex items-center space-x-4 text-[10px] text-zinc-500 pt-1">
+                  <span>Risk Score: <span className={isCritical ? 'text-severity-critical font-bold' : 'text-zinc-300'}>{incident.risk_score}/100</span></span>
+                  <span>Status: <span className="text-zinc-300">{incident.status}</span></span>
+                  <span className="truncate">Time: <span className="text-zinc-400">{new Date(incident.reported_at || incident.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></span>
+                </div>
+              </div>
+            </div>
+          );
+        })
+      ) : (
+        <div className="text-center py-8 text-zinc-500 font-mono">
+          [NO ACTIVE INCIDENTS OPEN]
+        </div>
+      )}
+    </div>
+  );
+};
+
+const DetectionActivity = ({ detections }: { detections: any[] }) => {
+  const detectionCounts: Record<string, number> = {};
+  detections.forEach((d: any) => {
+    const ruleName = d.rule_name || 'Unknown Rule';
+    detectionCounts[ruleName] = (detectionCounts[ruleName] || 0) + 1;
   });
 
-  const [events, setEvents] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const sortedDetections = Object.entries(detectionCounts)
+    .sort(([, countA], [, countB]) => countB - countA)
+    .slice(0, 5);
+
+  return (
+    <div className="space-y-2.5 font-mono text-xs">
+      {sortedDetections.length > 0 ? (
+        sortedDetections.map(([ruleName, count], index) => (
+          <div key={ruleName} className="flex items-center justify-between p-3 bg-panel-header/35 border border-panel-border/30 rounded hover:border-panel-border transition-colors">
+            <div className="flex items-center space-x-3 min-w-0">
+              <div className="h-6 w-6 rounded bg-cyber-blue-muted border border-cyber-blue/15 text-cyber-blue flex items-center justify-center shrink-0">
+                <Terminal className="h-3.5 w-3.5" />
+              </div>
+              <span className="font-bold text-zinc-200 truncate pr-2">{ruleName}</span>
+            </div>
+            <span className="text-[10px] font-bold text-cyber-blue bg-cyber-blue-muted px-2 py-0.5 border border-cyber-blue/20 rounded">
+              {count} HITS
+            </span>
+          </div>
+        ))
+      ) : (
+        <div className="text-center py-8 text-zinc-500 font-mono">
+          [NO DETECTION RUNS TRIGGERED]
+        </div>
+      )}
+    </div>
+  );
+};
+
+type HealthStatus = 'healthy' | 'unhealthy' | 'unknown' | 'degraded';
+
+const SystemHealth = ({ health }: { health: Record<string, HealthStatus> }) => {
+  return (
+    <div className="space-y-2.5 font-mono text-xs">
+      {Object.entries(health).map(([component, status]) => {
+        const isHealthy = status === 'healthy';
+        const isDegraded = status === 'degraded';
+        const badgeColor = isHealthy ? 'text-severity-low bg-severity-low/10 border-severity-low/20' : isDegraded ? 'text-severity-high bg-severity-high/10 border-severity-high/20' : 'text-severity-critical bg-severity-critical/10 border-severity-critical/20';
+
+        return (
+          <div
+            key={component}
+            className={`flex items-center justify-between p-3 bg-panel-header/35 border border-panel-border/30 rounded`}
+          >
+            <div className="flex items-center space-x-3">
+              <div className={`h-6 w-6 rounded flex items-center justify-center shrink-0 border ${
+                isHealthy ? 'bg-severity-low/10 border-severity-low/25 text-severity-low' :
+                isDegraded ? 'bg-severity-high/10 border-severity-high/25 text-severity-high' :
+                'bg-severity-critical/10 border-severity-critical/25 text-severity-critical'
+              }`}>
+                {isHealthy ? <CheckCircle className="h-3.5 w-3.5" /> : <AlertCircle className="h-3.5 w-3.5" />}
+              </div>
+              <span className="font-bold text-zinc-200 uppercase tracking-tight">{component.replace(/([A-Z])/g, ' $1')}</span>
+            </div>
+            <span className={`text-[9px] font-bold px-2 py-0.5 rounded border ${badgeColor}`}>
+              {status.toUpperCase()}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+export default function Dashboard() {
+  const [threatLevel, setThreatLevel] = useState<string>('LOW');
+  const [metrics, setMetrics] = useState<any>({
+    eventsPerMinute: 0,
+    activeIncidents: 0,
+    criticalIncidents: 0,
+    detectionCount: 0,
+    avgRiskScore: 0,
+    highRiskDetections: 0
+  });
+  const [events, setEvents] = useState<any[]>([]);
+  const [incidents, setIncidents] = useState<any[]>([]);
+  const [detections, setDetections] = useState<any[]>([]);
+  const [systemHealth, setSystemHealth] = useState<any>({
+    api: 'unknown',
+    database: 'unknown',
+    detectionEngine: 'unknown',
+    aiAnalyst: 'unknown',
+    authentication: 'unknown'
+  });
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch dashboard stats
-  const fetchDashboardStats = async () => {
+  // Fetch all dashboard data
+  const fetchDashboardData = async () => {
     if (!authUtils.isAuthenticated()) {
       setLoading(false);
       return;
     }
 
     try {
-      setLoading(true);
       setError(null);
 
-      // Fetch events count (last minute)
+      // Fetch events (last 5 minutes for better sample)
       const eventsResponse = await apiClient.get('/events/', {
-        params: { limit: 1000 } // Get a reasonable sample
+        params: { limit: 1000 }
       });
-
-      // Calculate events per minute (simplified - in production you'd have a specific endpoint)
       const allEvents = eventsResponse.data;
-      const now = new Date();
-      const oneMinuteAgo = new Date(now.getTime() - 60 * 1000);
 
+      // Calculate events per minute
+      const now = new Date();
+      const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
       const recentEvents = allEvents.filter((event: any) => {
         const eventTime = new Date(event.timestamp);
-        return eventTime >= oneMinuteAgo;
+        return eventTime >= fiveMinutesAgo;
       });
+      const eventsPerMinute = Math.round(recentEvents.length / 5);
 
       // Fetch incidents
       const incidentsResponse = await apiClient.get('/incidents/');
       const allIncidents = incidentsResponse.data;
+
+      // Count active incidents (NEW or INVESTIGATING)
       const activeIncidents = allIncidents.filter((incident: any) =>
         incident.status === 'NEW' || incident.status === 'INVESTIGATING'
       ).length;
 
-      // For critical assets, we'll use a placeholder - in production this would come from asset management
-      const criticalAssets = 5; // Placeholder
+      // Count critical incidents (severity critical and active)
+      const criticalIncidents = allIncidents.filter((incident: any) =>
+        (incident.status === 'NEW' || incident.status === 'INVESTIGATING') &&
+        incident.severity === 'critical'
+      ).length;
+
+      // Calculate average risk score of active incidents
+      const activeIncidentObjects = allIncidents.filter((incident: any) =>
+        incident.status === 'NEW' || incident.status === 'INVESTIGATING'
+      );
+      const avgRiskScore = activeIncidentObjects.length > 0 ?
+        activeIncidentObjects.reduce((sum: number, incident: any) => sum + (incident.risk_score || 0), 0) / activeIncidentObjects.length :
+        0;
+
+      // Count high risk detections (we'll need to fetch these)
+      const detectionResponse = await apiClient.get('/detection/run');
+      const detectionAlerts = detectionResponse.data || [];
+      const highRiskDetections = detectionAlerts.filter((d: any) =>
+        (d.risk_score || 0) > 70
+      ).length;
 
       // Determine threat level based on active incidents and their severity
       let threatLevel = 'LOW';
       if (activeIncidents > 0) {
-        const highSeverityIncidents = allIncidents.filter((incident: any) =>
-          (incident.status === 'NEW' || incident.status === 'INVESTIGATING') &&
-          incident.severity === 'high'
-        ).length;
-
         const criticalSeverityIncidents = allIncidents.filter((incident: any) =>
           (incident.status === 'NEW' || incident.status === 'INVESTIGATING') &&
           incident.severity === 'critical'
         ).length;
 
+        const highSeverityIncidents = allIncidents.filter((incident: any) =>
+          (incident.status === 'NEW' || incident.status === 'INVESTIGATING') &&
+          incident.severity === 'high'
+        ).length;
+
         if (criticalSeverityIncidents > 0) {
           threatLevel = 'CRITICAL';
-        } else if (highSeverityIncidents > 0) {
+        } else if (highSeverityIncidents > 2) {
           threatLevel = 'HIGH';
-        } else if (activeIncidents > 2) {
-          threatLevel = 'MEDIUM';
+        } else if (highSeverityIncidents > 0) {
+          threatLevel = 'ELEVATED';
+        } else if (activeIncidents > 3) {
+          threatLevel = 'GUARDED';
         }
       }
 
-      setStats({
-        eventsPerMinute: recentEvents.length,
-        activeIncidents,
-        criticalAssets,
-        threatLevel
-      });
+      // Fetch system health (simplified - in reality we'd have specific endpoints)
+      const healthChecks = await Promise.allSettled([
+        apiClient.get('/health').then(() => 'healthy').catch(() => 'unhealthy'),
+        apiClient.get('/incidents/').then(() => 'healthy').catch(() => 'unhealthy'),
+        apiClient.get('/events/').then(() => 'healthy').catch(() => 'unhealthy'),
+        apiClient.get('/mitre/techniques').then(() => 'healthy').catch(() => 'unhealthy'),
+        authUtils.isAuthenticated() ? Promise.resolve('healthy') : Promise.resolve('unhealthy')
+      ]);
 
-      // Store recent events for the event stream
-      setEvents(recentEvents.slice(0, 10)); // Show latest 10 events
+      const systemHealth = {
+        api: healthChecks[0].status === 'fulfilled' && healthChecks[0].value === 'healthy' ? 'healthy' : 'unhealthy',
+        database: healthChecks[1].status === 'fulfilled' && healthChecks[1].value === 'healthy' ? 'healthy' : 'unhealthy',
+        detectionEngine: healthChecks[2].status === 'fulfilled' && healthChecks[2].value === 'healthy' ? 'healthy' : 'unhealthy',
+        aiAnalyst: healthChecks[3].status === 'fulfilled' && healthChecks[3].value === 'healthy' ? 'healthy' : 'unhealthy',
+        authentication: healthChecks[4].status === 'fulfilled' && healthChecks[4].value === 'healthy' ? 'healthy' : 'unhealthy'
+      };
+
+      // Update state
+      setEvents(recentEvents.slice(0, 15)); // Show latest 15 events
+      setIncidents(allIncidents);
+      setDetections(detectionAlerts);
+      setThreatLevel(threatLevel);
+      setMetrics({
+        eventsPerMinute,
+        activeIncidents,
+        criticalIncidents,
+        detectionCount: detectionAlerts.length,
+        avgRiskScore: Number(avgRiskScore.toFixed(1)),
+        highRiskDetections
+      });
+      setSystemHealth(systemHealth);
     } catch (err) {
-      console.error('Failed to fetch dashboard stats:', err);
+      console.error('Failed to fetch dashboard data:', err);
       setError('Failed to load dashboard data');
     } finally {
       setLoading(false);
@@ -95,227 +573,179 @@ export default function Dashboard() {
 
   // Initial load and periodic updates
   useEffect(() => {
-    fetchDashboardStats();
+    fetchDashboardData();
 
-    // Update every 5 seconds
-    const interval = setInterval(fetchDashboardStats, 5000);
+    // Update every 4 seconds for real-time operations look
+    const interval = setInterval(fetchDashboardData, 4000);
     return () => clearInterval(interval);
   }, []);
 
   if (loading && events.length === 0 && !error) {
     return (
-      <div className="min-h-screen bg-zinc-950">
-        <header className="border-b border-zinc-800 bg-zinc-900/50 backdrop-blur-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <h1 className="text-2xl font-bold text-white flex items-center space-x-3">
-              <span className="text-primary">Aegis</span> Security Operations Dashboard
-            </h1>
-          </div>
-        </header>
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center py-12">
-            <div className="inline-flex items-center justify-center h-12 w-12 rounded-md border-2 border-primary/50 text-primary mb-4">
-              Zap
-            </div>
-            <p className="text-zinc-400">Loading dashboard data...</p>
-          </div>
-        </main>
+      <div className="min-h-screen bg-[#03070b] flex flex-col items-center justify-center space-y-4">
+        <Cpu className="h-10 w-10 text-cyber-blue animate-spin" />
+        <p className="text-zinc-500 font-mono text-xs tracking-wider">BOOTING SEC-OPS OPERATIONS CENTER ENGINE...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-zinc-950">
-        <header className="border-b border-zinc-800 bg-zinc-900/50 backdrop-blur-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <h1 className="text-2xl font-bold text-white flex items-center space-x-3">
-              <span className="text-primary">Aegis</span> Security Operations Dashboard
-            </h1>
-          </div>
-        </header>
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center py-12">
-            <div className="inline-flex items-center justify-center h-12 w-12 rounded-md border-2 border-red-500/50 text-red-400 mb-4">
-              AlertTriangle
-            </div>
-            <p className="text-zinc-400">{error}</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="mt-4 flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-white hover:bg-primary/90 transition-colors"
-            >
-              Retry
-            </button>
-          </div>
-        </main>
+      <div className="min-h-screen bg-[#03070b] flex flex-col items-center justify-center p-6 space-y-4">
+        <div className="w-12 h-12 flex items-center justify-center bg-severity-critical/10 text-severity-critical border border-severity-critical/20 rounded">
+          <AlertTriangle className="h-6 w-6" />
+        </div>
+        <p className="text-zinc-400 font-mono text-xs">{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="flex h-10 items-center justify-center rounded bg-cyber-blue px-5 text-sm font-semibold text-[#03070b] hover:bg-primary-hover transition-colors"
+        >
+          RESTART OPERATIONS
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950">
-      <header className="border-b border-zinc-800 bg-zinc-900/50 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <h1 className="text-2xl font-bold text-white flex items-center space-x-3">
-            <span className="text-primary">Aegis</span> Security Operations Dashboard
-          </h1>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Row */}
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-          <Stat
-            title="Events/Minute"
-            value={stats.eventsPerMinute.toLocaleString()}
-            trend={stats.eventsPerMinute > 100 ? 'up' : 'neutral'}
-            trendValue={Math.max(0, stats.eventsPerMinute - 50)} // Simplified trend
-            description="Events processed in the last minute"
-          />
-          <Stat
-            title="Active Incidents"
-            value={stats.activeIncidents}
-            trend={stats.activeIncidents > 0 ? 'up' : 'neutral'}
-            trendValue={stats.activeIncidents}
-            description="Currently under investigation"
-          />
-          <Stat
-            title="Critical Assets"
-            value={stats.criticalAssets}
-            trend="neutral"
-            trendValue={0}
-            description="Assets requiring special monitoring"
-          />
-          <Stat
-            title="Threat Level"
-            value={stats.threatLevel}
-            trend={stats.threatLevel === 'HIGH' || stats.threatLevel === 'CRITICAL' ? 'up' : stats.threatLevel === 'LOW' ? 'down' : 'neutral'}
-            trendValue={0}
-            description="Overall threat level"
-          >
-            <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-              stats.threatLevel === 'HIGH' || stats.threatLevel === 'CRITICAL' ? 'bg-red-500/20 text-red-400' :
-              stats.threatLevel === 'MEDIUM' ? 'bg-yellow-500/20 text-yellow-400' :
-              'bg-green-500/20 text-green-400'
-            }`}>
-              {stats.threatLevel}
-            </span>
-          </Stat>
-        </div>
-
-        {/* Charts and Widgets */}
-        <div className="grid gap-6">
-          <div className="col-span-2 lg:col-span-3">
-            <Card className="h-full">
-              <header className="flex items-center justify-between p-6 border-b border-zinc-800">
-                <h2 className="text-lg font-semibold text-white">Real-Time Event Stream</h2>
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={fetchDashboardStats}
-                    className="text-zinc-400 hover:text-white transition-colors"
-                  >
-                    Refresh
-                  </button>
-                  <select className="bg-zinc-800/50 border border-zinc-700 rounded px-3 py-1 text-zinc-200">
-                    <option value="all">All Events</option>
-                    <option value="critical">Critical Only</option>
-                    <option value="alerts">Alerts Only</option>
-                  </select>
-                </div>
-              </header>
-              <div className="p-6 space-y-4">
-                {events.length > 0 ? (
-                  events.map((event: any, index) => ({
-                    key: event.id || index,
-                    ...event
-                  })).map((event: any, index) => (
-                    <div key={event.id || index} className="flex items-start space-x-3 p-4 bg-zinc-900/20 rounded-lg border border-zinc-800/30">
-                      <div className="h-8 w-8 flex items-center justify-center rounded-full bg-primary/20 text-primary flex-shrink-0">
-                        Zap
-                      </div>
-                      <div className="flex-1 space-y-1">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-medium text-white">{event.event_type || 'UNKNOWN'}</h4>
-                          <span className={`text-xs px-2 py-0.5 rounded ${
-                            event.severity === 'high' || event.severity === 'critical' ? 'bg-red-500/20 text-red-400' :
-                            event.severity === 'medium' ? 'bg-orange-500/20 text-orange-400' :
-                            'bg-yellow-500/20 text-yellow-400'
-                          }`}>
-                            {event.severity?.toUpperCase() || 'LOW'}
-                          </span>
-                        </div>
-                        <p className="text-zinc-400 text-sm">
-                          {event.source_ip} attempted to access {event.asset || 'unknown asset'}
-                          {event.user ? `(user: ${event.user})` : ''}
-                        </p>
-                        <p className="text-zinc-500 text-xs">
-                          {new Date(event.timestamp).toLocaleTimeString()}
-                        </p>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8 text-zinc-500">
-                    No recent events
-                  </div>
-                )}
+    <div className="min-h-screen bg-[#03070b] text-[#f3f4f6]">
+      {/* TOP HEADER STATUS BAR */}
+      <header className="border-b border-panel-border bg-panel-header/90 backdrop-blur-md sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <span 
+                className="text-white font-extrabold text-lg tracking-tight cursor-pointer"
+                onClick={() => window.location.href = '/'}
+              >
+                AEGIS<span className="text-cyber-blue">SOC</span>
+              </span>
+              <span className="h-4 w-px bg-panel-border"></span>
+              <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest hidden sm:inline-block">COMMAND WORKSTATION</span>
+            </div>
+            
+            <div className="flex items-center space-x-6 text-xs font-mono">
+              <div className="flex items-center space-x-2">
+                <span className={`h-2 w-2 rounded-full animate-pulse ${
+                  threatLevel === 'CRITICAL' ? 'bg-severity-critical' :
+                  threatLevel === 'HIGH' ? 'bg-severity-high' :
+                  threatLevel === 'ELEVATED' ? 'bg-severity-medium' :
+                  threatLevel === 'GUARDED' ? 'bg-severity-medium' :
+                  'bg-severity-low'
+                }`} />
+                <span className="text-zinc-400 text-[10px]">SOC STATUS: ONLINE</span>
               </div>
-            </Card>
-          </div>
-
-          <div className="lg:col-span-3">
-            <div className="grid gap-6 sm:grid-cols-2">
-              <Card className="h-full">
-                <header className="p-6 border-b border-zinc-800">
-                  <h2 className="text-lg font-semibold text-white">Threat Intelligence Feed</h2>
-                </header>
-                <div className="p-4">
-                  {/* In a real implementation, this would come from a threat intel API */}
-                  <div className="text-zinc-500 text-sm text-center py-8">
-                    Threat intelligence integration coming soon
-                  </div>
-                </div>
-              </Card>
-              <Card className="h-full">
-                <header className="p-6 border-b border-zinc-800">
-                  <h2 className="text-lg font-semibold text-white">MITRE ATT&CK Coverage</h2>
-                </header>
-                <div className="p-4">
-                  {/* Mock MITRE data - in production this would come from /mitre/techniques endpoint */}
-                  <div className="space-y-3">
-                    <div className="flex items-start space-x-3">
-                      <div className="h-6 w-6 flex items-center justify-center rounded-full bg-blue-500/20 text-blue-400 flex-shrink-0">
-                        T1110
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-white">Brute Force</h4>
-                        <p className="text-zinc-400 text-sm">Credential Access</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start space-x-3">
-                      <div className="h-6 w-6 flex items-center justify-center rounded-full bg-blue-500/20 text-blue-400 flex-shrink-0">
-                        T1068
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-white">Exploitation for Privilege Escalation</h4>
-                        <p className="text-zinc-400 text-sm">Privilege Escalation</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start space-x-3">
-                      <div className="h-6 w-6 flex items-center justify-center rounded-full bg-blue-500/20 text-blue-400 flex-shrink-0">
-                        T1046
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-white">Network Service Scanning</h4>
-                        <p className="text-zinc-400 text-sm">Discovery</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </Card>
+              
+              <div className="hidden md:flex items-center space-x-4 text-zinc-500">
+                <span className="text-[10px]">ENV: {process.env.NODE_ENV === 'development' ? 'DEV' : 'PROD'}</span>
+                <span className="text-[10px] text-zinc-400 flex items-center">
+                  <Clock className="h-3 w-3 mr-1" />
+                  {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+                <span className="relative cursor-pointer hover:text-white transition-colors" onClick={() => window.location.href = '/incidents'}>
+                  <Bell className="h-4 w-4" />
+                  {metrics.criticalIncidents > 0 && (
+                    <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-severity-critical animate-ping" />
+                  )}
+                </span>
+              </div>
             </div>
           </div>
         </div>
+      </header>
+
+      {/* MAIN CONSOLE PANEL */}
+      <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+        
+        {/* THREAT LEVEL BANNER */}
+        <section>
+          <ThreatLevelIndicator level={threatLevel} />
+        </section>
+
+        {/* THREE-COLUMN GRID CONSOLE */}
+        <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          
+          {/* LEFT COLUMN: TELEMETRY & METRICS */}
+          <div className="lg:col-span-4 space-y-6 flex flex-col">
+            <Card className="flex-1 flex flex-col">
+              <div className="flex items-center justify-between pb-3 border-b border-panel-border mb-4">
+                <h3 className="text-xs font-mono font-bold tracking-widest text-zinc-400 uppercase flex items-center">
+                  <Activity className="h-4 w-4 text-cyber-blue mr-2" />
+                  SECURITY METRICS
+                </h3>
+              </div>
+              <SecurityMetrics metrics={metrics} />
+            </Card>
+
+            <Card className="flex-1 flex flex-col">
+              <div className="flex items-center justify-between pb-3 border-b border-panel-border mb-4">
+                <h3 className="text-xs font-mono font-bold tracking-widest text-zinc-400 uppercase flex items-center">
+                  <Terminal className="h-4 w-4 text-cyber-blue mr-2" />
+                  LIVE EVENT TELEMETRY
+                </h3>
+                <button 
+                  onClick={fetchDashboardData}
+                  className="text-zinc-500 hover:text-white transition-colors"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                </button>
+              </div>
+              <LiveEventStream events={events} />
+            </Card>
+          </div>
+
+          {/* MIDDLE COLUMN: VISUALIZATION & PRIORITY QUEUE */}
+          <div className="lg:col-span-5 space-y-6 flex flex-col">
+            <Card className="flex-1 flex flex-col">
+              <div className="flex items-center justify-between pb-3 border-b border-panel-border mb-4">
+                <h3 className="text-xs font-mono font-bold tracking-widest text-zinc-400 uppercase flex items-center">
+                  <Network className="h-4 w-4 text-cyber-blue mr-2" />
+                  THREAT CORRELATION MAP
+                </h3>
+              </div>
+              <ThreatActivityViz events={events} incidents={incidents} />
+            </Card>
+
+            <Card className="flex-1 flex flex-col">
+              <div className="flex items-center justify-between pb-3 border-b border-panel-border mb-4">
+                <h3 className="text-xs font-mono font-bold tracking-widest text-zinc-400 uppercase flex items-center">
+                  <ShieldAlert className="h-4 w-4 text-cyber-blue mr-2" />
+                  INCIDENT PRIORITY QUEUE
+                </h3>
+                <span 
+                  onClick={() => window.location.href = '/incidents'}
+                  className="text-[10px] font-mono text-cyber-blue hover:underline cursor-pointer"
+                >
+                  QUEUE LIST →
+                </span>
+              </div>
+              <IncidentPriorityPanel incidents={incidents} />
+            </Card>
+          </div>
+
+          {/* RIGHT COLUMN: DETECTIONS & DIAGNOSTIC SYSTEM HEALTH */}
+          <div className="lg:col-span-3 space-y-6 flex flex-col">
+            <Card className="flex-1 flex flex-col">
+              <div className="flex items-center justify-between pb-3 border-b border-panel-border mb-4">
+                <h3 className="text-xs font-mono font-bold tracking-widest text-zinc-400 uppercase flex items-center">
+                  <Cpu className="h-4 w-4 text-cyber-blue mr-2" />
+                  DETECTION SIGNALS
+                </h3>
+              </div>
+              <DetectionActivity detections={detections} />
+            </Card>
+
+            <Card className="flex-1 flex flex-col">
+              <div className="flex items-center justify-between pb-3 border-b border-panel-border mb-4">
+                <h3 className="text-xs font-mono font-bold tracking-widest text-zinc-400 uppercase flex items-center">
+                  <Server className="h-4 w-4 text-cyber-blue mr-2" />
+                  DIAGNOSTIC HEALTH
+                </h3>
+              </div>
+              <SystemHealth health={systemHealth} />
+            </Card>
+          </div>
+
+        </section>
       </main>
     </div>
   );

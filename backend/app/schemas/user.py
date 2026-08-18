@@ -16,7 +16,7 @@ class RoleInDBBase(RoleBase):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class RoleInDB(RoleInDBBase):
     pass
@@ -45,7 +45,7 @@ class UserInDBBase(UserBase):
     last_login_at: Optional[datetime] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class UserInDB(UserInDBBase):
     hashed_password: str

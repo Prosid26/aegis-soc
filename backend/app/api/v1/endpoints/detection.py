@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any
 from app.db.session import get_db
@@ -9,6 +9,7 @@ from app.models.user import User
 from app.models.detection import Detection
 from app.models.incident import Incident
 from app.models.mitre import MITRETechnique
+from app.core.rate_limiting import limiter
 
 router = APIRouter()
 
@@ -86,7 +87,9 @@ def _save_alerts_to_db(db: Session, alerts: List[Dict[str, Any]]) -> List[Dict[s
     return alerts
 
 @router.post("/run", response_model=List[Dict[str, Any]])
+@limiter.limit("5/minute")
 def run_detection_rules(
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
@@ -111,7 +114,9 @@ def run_detection_rules(
     return alerts
 
 @router.post("/brute-force", response_model=List[Dict[str, Any]])
+@limiter.limit("5/minute")
 def run_brute_force_detection(
+    request: Request,
     time_window_minutes: int = 5,
     threshold: int = 10,
     db: Session = Depends(get_db),
@@ -138,7 +143,9 @@ def run_brute_force_detection(
     return alerts
 
 @router.post("/port-scan", response_model=List[Dict[str, Any]])
+@limiter.limit("5/minute")
 def run_port_scan_detection(
+    request: Request,
     threshold_ports: int = 20,
     time_window_minutes: int = 5,
     db: Session = Depends(get_db),
@@ -165,7 +172,9 @@ def run_port_scan_detection(
     return alerts
 
 @router.post("/privilege-escalation", response_model=List[Dict[str, Any]])
+@limiter.limit("5/minute")
 def run_privilege_escalation_detection(
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):

@@ -4,6 +4,7 @@ from sqlalchemy import engine_from_config, pool
 from logging.config import fileConfig
 import os
 import sys
+from dotenv import load_dotenv
 
 # add the app directory to the path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
@@ -43,6 +44,10 @@ def run_migrations_offline():
 
     """
     url = config.get_main_option("sqlalchemy.url")
+    if url is None:
+        # Load environment variables from .env file if not already loaded
+        load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
+        url = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/aegis_soc")
     context.configure(
         url=url, target_metadata=target_metadata, literal_binds=True, dialect_opts={"paramstyle": "named"}
     )
@@ -58,6 +63,9 @@ def run_migrations_online():
     and associate a connection with the context.
 
     """
+    # Load environment variables from .env file
+    load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
+
     # this setup is a bit different because we want to read
     # the database URL from environment variables
     configuration = config.get_section(config.config_ini_section)
