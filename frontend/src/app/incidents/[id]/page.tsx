@@ -109,7 +109,7 @@ export default function IncidentDetail({ params }: { params: { id: string } }) {
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold text-white flex items-center space-x-2">
                 <span className="text-primary">Aegis</span> Incident Details
-              </div>
+              </h2>
               <button
                 onClick={() => window.location.href = '/incidents'}
                 className="flex h-10 items-center justify-center rounded-md bg-zinc-800/50 px-4 text-sm font-medium text-zinc-300 hover:bg-zinc-700 transition-colors"
@@ -139,7 +139,7 @@ export default function IncidentDetail({ params }: { params: { id: string } }) {
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold text-white flex items-center space-x-2">
                 <span className="text-primary">Aegis</span> Incident Details
-              </div>
+              </h2>
               <button
                 onClick={() => window.location.href = '/incidents'}
                 className="flex h-10 items-center justify-center rounded-md bg-zinc-800/50 px-4 text-sm font-medium text-zinc-300 hover:bg-zinc-700 transition-colors"
@@ -175,7 +175,7 @@ export default function IncidentDetail({ params }: { params: { id: string } }) {
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold text-white flex items-center space-x-2">
                 <span className="text-primary">Aegis</span> Incident Details
-              </div>
+              </h2>
               <button
                 onClick={() => window.location.href = '/incidents'}
                 className="flex h-10 items-center justify-center rounded-md bg-zinc-800/50 px-4 text-sm font-medium text-zinc-300 hover:bg-zinc-700 transition-colors"
@@ -316,10 +316,13 @@ export default function IncidentDetail({ params }: { params: { id: string } }) {
                           </span>
                         </div>
                         <p className="text-zinc-400 text-sm">{detection.description}</p>
-                        {detection.mitre_techniques && detection.mitre_techniques.length > 0 && (
+                        {detection.mitre_techniques?.length > 0 && (
                           <div className="mt-2 flex flex-wrap gap-2">
                             {detection.mitre_techniques.map((tech: any) => (
-                              <span key={tech.id} className="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-400">
+                              <span
+                                key={tech.technique_id}
+                                className="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-400"
+                              >
                                 {tech.technique_id}
                               </span>
                             ))}
@@ -509,7 +512,7 @@ export default function IncidentDetail({ params }: { params: { id: string } }) {
                 <p className="text-zinc-400">No questions for analyst</p>
               )}
             </div>
-          </>
+          </div>
         )}
       </main>
     </div>

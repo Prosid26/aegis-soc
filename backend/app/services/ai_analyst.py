@@ -14,6 +14,7 @@ from app.models.asset import Asset
 from app.models.mitre import MITRETechnique
 from app.models.user import User
 from app.models.association import event_threat_intel, detection_mitre_technique
+from app.models.ai_analysis import IncidentAIAnalysis
 from app.services.ai_provider import get_ai_provider
 from app.schemas.ai import IncidentAnalysisInput, IncidentAnalysisOutput
 from app.core.config import settings

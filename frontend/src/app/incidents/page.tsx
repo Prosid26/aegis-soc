@@ -156,7 +156,7 @@ export default function Incidents() {
                       <span>Status: <span className="text-white">{incident.status || 'UNKNOWN'}</span></span>
                       <span>Risk Score: <span className="text-white">{incident.risk_score || 0}/100</span></span>
                       <span>Detected: <span className="text-white">
-                        {new Incident(incident.reported_at || incident.timestamp).toLocaleDateString()}
+                        {new Date(incident.reported_at || incident.timestamp).toLocaleDateString()}
                       </span></span>
                     </div>
                   </div>

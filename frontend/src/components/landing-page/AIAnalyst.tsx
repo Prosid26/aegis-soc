@@ -467,7 +467,8 @@ export default function AIAnalyst() {
             </div>
           </div>
         </div>
+      </div>
       </section>
-    );
-  }
+  );
 }
+ 
