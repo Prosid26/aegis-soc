@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session, aliased
 from sqlalchemy import func, and_, or_
 from app.models.event import Event
@@ -11,33 +11,74 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class DetectionEngine:
     def __init__(self, db: Session):
         self.db = db
 
-    def _compute_risk_score(self, severity: str, confidence: int, event_count: int, asset_critical: bool) -> int:
+    def _compute_risk_score(self, severity: str, confidence: int, event_count: int, asset_critical: bool,
+                          threat_intel_confidence: Optional[int] = None,
+                          threat_intel_severity: Optional[str] = None,
+                          mitre_present: bool = False) -> Dict[str, Any]:
         """
-        Compute deterministic risk score (0-100) based on:
-        - severity: low=10, medium=30, high=60, critical=80
-        - confidence: 0-100 weight
-        - event_count: log scale, capped at 10 events -> 20 points
-        - asset_critical: +20 if critical
-        Formula: risk = min(100, severity_score + (confidence * 0.3) + min(20, event_count * 2) + (20 if asset_critical else 0))
+        Compute risk score (0-100) with explainable factors.
+        Returns dict with 'score' and 'factors'.
         """
+        # Severity points: low=10, medium=30, high=60, critical=80
         severity_scores = {
             "low": 10,
             "medium": 30,
             "high": 60,
             "critical": 80
         }
-        severity_score = severity_scores.get(severity.lower(), 20)
-        # confidence contributes up to 30 points
-        confidence_score = min(30, confidence * 0.3)
-        # event count contributes up to 20 points (assuming more than 10 events is rare)
-        event_count_score = min(20, event_count * 2)
-        critical_score = 20 if asset_critical else 0
-        risk = int(severity_score + confidence_score + event_count_score + critical_score)
-        return min(100, risk)
+        severity_points = severity_scores.get(severity.lower(), 20)
+
+        # Confidence contributes up to 30 points (0-100 * 0.3)
+        confidence_points = min(30, confidence * 0.3)
+
+        # Event count contributes up to 20 points (assuming >10 events is rare)
+        event_count_points = min(20, event_count * 2)
+
+        # Asset criticality adds 20 points
+        critical_points = 20 if asset_critical else 0
+
+        # Base score
+        base_score = severity_points + confidence_points + event_count_points + critical_points
+
+        # Threat intelligence points: up to 10 points based on confidence
+        threat_intel_points = 0
+        if threat_intel_confidence is not None:
+            threat_intel_points = min(10, threat_intel_confidence * 0.1)
+
+        # MITRE ATT&CK points: up to 10 points if MITRE mapping exists
+        mitre_points = 10 if mitre_present else 0
+
+        # Calculate final score with caps
+        final_score = base_score + threat_intel_points + mitre_points
+        final_score = min(100, final_score)
+
+        # Build factors breakdown
+        factors = {
+            "severity_points": severity_points,
+            "confidence_points": confidence_points,
+            "event_count_points": event_count_points,
+            "critical_points": critical_points,
+            "threat_intel_points": threat_intel_points,
+            "mitre_points": mitre_points,
+            "base_score": base_score,
+            "final_score": final_score
+        }
+
+        # Add optional threat intel details if provided
+        if threat_intel_severity is not None:
+            factors["threat_intel_severity"] = threat_intel_severity
+        if threat_intel_confidence is not None:
+            factors["threat_intel_confidence"] = threat_intel_confidence
+
+        return {
+            "score": int(final_score),
+            "factors": factors
+        }
 
     def _get_asset_criticality(self, asset_id: int) -> bool:
         """Check if asset is critical."""
@@ -83,7 +124,7 @@ class DetectionEngine:
                 asset_critical = self._get_asset_criticality(asset_id)
 
             # Compute risk score
-            risk_score = self._compute_risk_score(
+            risk_result = self._compute_risk_score(
                 severity="high" if count >= 20 else "medium",
                 confidence=min(95, 60 + (count - threshold) * 2),
                 event_count=count,
@@ -96,7 +137,8 @@ class DetectionEngine:
                 "description": f"Detected {count} authentication failures from IP {ip} within {time_window_minutes} minutes",
                 "severity": "high" if count >= 20 else "medium",
                 "confidence": min(95, 60 + (count - threshold) * 2),
-                "risk_score": risk_score,
+                "risk_score": risk_result["score"],
+                "risk_score_factors": risk_result["factors"],
                 "event_ids": [e.id for e in failure_events],
                 "evidence": {
                     "source_ip": ip,
@@ -162,7 +204,7 @@ class DetectionEngine:
                     if curr.asset_id:
                         asset_critical = self._get_asset_criticality(curr.asset_id)
                     # Compute risk score
-                    risk_score = self._compute_risk_score(
+                    risk_result = self._compute_risk_score(
                         severity="medium",
                         confidence=80,  # high confidence for impossible travel
                         event_count=2,  # at least two events
@@ -174,7 +216,8 @@ class DetectionEngine:
                         "description": f"User {user} logged in from {curr.source_ip} and then {nxt.source_ip} within {time_window_minutes} minutes",
                         "severity": "medium",
                         "confidence": 80,
-                        "risk_score": risk_score,
+                        "risk_score": risk_result["score"],
+                        "risk_score_factors": risk_result["factors"],
                         "event_ids": [curr.id, nxt.id],
                         "evidence": {
                             "user": user,
@@ -233,7 +276,7 @@ class DetectionEngine:
                 asset_critical = self._get_asset_criticality(asset_id)
 
             # Compute risk score
-            risk_score = self._compute_risk_score(
+            risk_result = self._compute_risk_score(
                 severity="medium",
                 confidence=min(90, 50 + (port_count - threshold_ports) * 2),
                 event_count=port_count,
@@ -246,7 +289,8 @@ class DetectionEngine:
                 "description": f"Detected scanning of {port_count} distinct ports from IP {ip} within {time_window_minutes} minutes",
                 "severity": "medium",
                 "confidence": min(90, 50 + (port_count - threshold_ports) * 2),
-                "risk_score": risk_score,
+                "risk_score": risk_result["score"],
+                "risk_score_factors": risk_result["factors"],
                 "event_ids": [e.id for e in scan_events],
                 "evidence": {
                     "source_ip": ip,
@@ -290,7 +334,7 @@ class DetectionEngine:
             # Determine asset criticality
             asset_critical = self._get_asset_criticality(event.asset_id) if event.asset_id else False
             # Compute risk score
-            risk_score = self._compute_risk_score(
+            risk_result = self._compute_risk_score(
                 severity="high",
                 confidence=85,
                 event_count=1,
@@ -302,7 +346,8 @@ class DetectionEngine:
                 "description": f"Privilege escalation event detected for user {event.user} on asset {event.asset}",
                 "severity": "high",
                 "confidence": 85,
-                "risk_score": risk_score,
+                "risk_score": risk_result["score"],
+                "risk_score_factors": risk_result["factors"],
                 "event_ids": [event.id],
                 "evidence": {
                     "user": event.user,
@@ -341,7 +386,7 @@ class DetectionEngine:
                 # Determine asset criticality
                 asset_critical = self._get_asset_criticality(event.asset_id) if event.asset_id else False
                 # Compute risk score
-                risk_score = self._compute_risk_score(
+                risk_result = self._compute_risk_score(
                     severity="low",
                     confidence=70,
                     event_count=1,
@@ -353,7 +398,8 @@ class DetectionEngine:
                     "description": f"Login outside normal hours for user {event.user} at {event.timestamp}",
                     "severity": "low",
                     "confidence": 70,
-                    "risk_score": risk_score,
+                    "risk_score": risk_result["score"],
+                    "risk_score_factors": risk_result["factors"],
                     "event_ids": [event.id],
                     "evidence": {
                         "user": event.user,
@@ -401,11 +447,15 @@ class DetectionEngine:
             # Determine asset criticality
             asset_critical = self._get_asset_criticality(event.asset_id) if event.asset_id else False
             # Compute risk score
-            risk_score = self._compute_risk_score(
-                severity=intel.threat_type.lower() if intel.threat_type in ["malware", "c2", "ransomware"] else "medium",
+            # Determine severity from threat type
+            severity = "high" if intel.threat_type.lower() in ["malware", "c2", "ransomware"] else "medium"
+            risk_result = self._compute_risk_score(
+                severity=severity,
                 confidence=intel.confidence,
                 event_count=1,
-                asset_critical=asset_critical
+                asset_critical=asset_critical,
+                threat_intel_confidence=intel.confidence,
+                threat_intel_severity=intel.threat_type
             )
             alert = {
                 "rule_id": "IOC_MATCH_001",
@@ -413,7 +463,8 @@ class DetectionEngine:
                 "description": f"Event matches threat intelligence indicator: {intel.indicator}",
                 "severity": "high" if intel.threat_type.lower() in ["malware", "c2", "ransomware"] else "medium",
                 "confidence": intel.confidence,
-                "risk_score": risk_score,
+                "risk_score": risk_result["score"],
+                "risk_score_factors": risk_result["factors"],
                 "event_ids": [event.id],
                 "evidence": {
                     "event_id": event.event_id,

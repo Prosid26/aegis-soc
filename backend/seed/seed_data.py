@@ -2,6 +2,7 @@
 Seed data script for AegisSOC
 Run this script to populate the database with demo data
 """
+import os
 from sqlalchemy.orm import Session
 from app.db.session import SessionLocal, engine
 from app.db.base import Base
@@ -34,22 +35,42 @@ def create_roles(db: Session):
 
 def create_users(db: Session):
     """Create demo users"""
+    # Get seed passwords from environment variables with clear names
+    admin_password = os.getenv("SEED_ADMIN_PASSWORD")
+    analyst_password = os.getenv("SEED_ANALYST_PASSWORD")
+    viewer_password = os.getenv("SEED_VIEWER_PASSWORD")
+
+    # Fail clearly if required environment variables are missing
+    missing_vars = []
+    if not admin_password:
+        missing_vars.append("SEED_ADMIN_PASSWORD")
+    if not analyst_password:
+        missing_vars.append("SEED_ANALYST_PASSWORD")
+    if not viewer_password:
+        missing_vars.append("SEED_VIEWER_PASSWORD")
+
+    if missing_vars:
+        raise ValueError(
+            f"Missing required seed password environment variables: {', '.join(missing_vars)}. "
+            "Please set SEED_ADMIN_PASSWORD, SEED_ANALYST_PASSWORD, and SEED_VIEWER_PASSWORD."
+        )
+
     # Get roles
     admin_role = db.query(Role).filter(Role.name == "ADMIN").first()
     analyst_role = db.query(Role).filter(Role.name == "SECURITY_ANALYST").first()
     viewer_role = db.query(Role).filter(Role.name == "VIEWER").first()
 
-    # Debug password lengths
-    print("Creating users")
-    print("admin123 length:", len("admin123"))
-    print("analyst123 length:", len("analyst123"))
-    print("viewer123 length:", len("viewer123"))
+    # Debug password lengths (do not print actual passwords)
+    print(f"Creating users")
+    print(f"admin password length: {len(admin_password)}")
+    print(f"analyst password length: {len(analyst_password)}")
+    print(f"viewer password length: {len(viewer_password)}")
     users = [
         {
             "email": "admin@aegis-soc.com",
             "username": "admin",
             "full_name": "System Administrator",
-            "hashed_password": get_password_hash("admin123"),
+            "hashed_password": get_password_hash(admin_password),
             "is_active": True,
             "is_verified": True
         },
@@ -57,7 +78,7 @@ def create_users(db: Session):
             "email": "analyst@aegis-soc.com",
             "username": "analyst",
             "full_name": "Security Analyst",
-            "hashed_password": get_password_hash("analyst123"),
+            "hashed_password": get_password_hash(analyst_password),
             "is_active": True,
             "is_verified": True
         },
@@ -65,7 +86,7 @@ def create_users(db: Session):
             "email": "viewer@aegis-soc.com",
             "username": "viewer",
             "full_name": "Security Viewer",
-            "hashed_password": get_password_hash("viewer123"),
+            "hashed_password": get_password_hash(viewer_password),
             "is_active": True,
             "is_verified": True
         }

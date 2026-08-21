@@ -13,7 +13,7 @@ class Incident(Base):
     title = Column(String(255), nullable=False)
     description = Column(Text)
     severity = Column(String(20))  # low, medium, high, critical
-    status = Column(String(20), default="NEW")  # NEW, INVESTIGATING, CONTAINED, RESOLVED
+    status = Column(String(20), default="NEW")  # NEW (Open), INVESTIGATING, CONTAINED, RESOLVED, FALSE_POSITIVE
     assigned_to = Column(Integer, ForeignKey('users.id'), nullable=True)
     reported_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -29,3 +29,9 @@ class Incident(Base):
     affected_assets = relationship("Asset", secondary=incident_asset, back_populates="incidents")
     detections = relationship("Detection", secondary="detection_incident", back_populates="incidents")
     ai_analyses = relationship("IncidentAIAnalysis", back_populates="incident")
+
+    def add_timeline_entry(self, entry: dict):
+        """Add an entry to the timeline."""
+        if self.timeline is None:
+            self.timeline = []
+        self.timeline.append(entry)

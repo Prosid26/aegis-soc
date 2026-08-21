@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
+from datetime import datetime
 from app.db.session import get_db
 from app.services.detection_engine import DetectionEngine
+from app.services.correlation_engine import get_correlation_engine, CorrelationEngine
 from app.services.mitre_mapping import get_mitre_techniques_for_rule
 from app.core.deps import get_current_active_user
 from app.models.user import User
@@ -86,6 +88,7 @@ def _save_alerts_to_db(db: Session, alerts: List[Dict[str, Any]]) -> List[Dict[s
     db.commit()
     return alerts
 
+
 @router.post("/run", response_model=List[Dict[str, Any]])
 @limiter.limit("5/minute")
 def run_detection_rules(
@@ -112,6 +115,7 @@ def run_detection_rules(
         ]
     _save_alerts_to_db(db, alerts)
     return alerts
+
 
 @router.post("/brute-force", response_model=List[Dict[str, Any]])
 @limiter.limit("5/minute")
@@ -142,6 +146,7 @@ def run_brute_force_detection(
     _save_alerts_to_db(db, alerts)
     return alerts
 
+
 @router.post("/port-scan", response_model=List[Dict[str, Any]])
 @limiter.limit("5/minute")
 def run_port_scan_detection(
@@ -171,6 +176,7 @@ def run_port_scan_detection(
     _save_alerts_to_db(db, alerts)
     return alerts
 
+
 @router.post("/privilege-escalation", response_model=List[Dict[str, Any]])
 @limiter.limit("5/minute")
 def run_privilege_escalation_detection(
@@ -197,3 +203,88 @@ def run_privilege_escalation_detection(
         ]
     _save_alerts_to_db(db, alerts)
     return alerts
+
+
+@router.get("/correlations", response_model=List[Dict[str, Any]])
+@limiter.limit("10/minute")
+def get_correlations(
+    request: Request,
+    severity: Optional[str] = None,
+    asset: Optional[str] = None,
+    source_ip: Optional[str] = None,
+    user: Optional[str] = None,
+    start_time: Optional[str] = None,
+    end_time: Optional[str] = None,
+    window_minutes: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Get correlated events (attack chains) with optional filtering.
+    Filter by severity, asset, source_ip, user, and time range.
+    Time range can be specified by either start_time and end_time (ISO format strings)
+    or window_minutes (last N minutes from now). If neither is provided, defaults to last 60 minutes.
+    """
+    # Parse time parameters
+    parsed_start_time: Optional[datetime] = None
+    parsed_end_time: Optional[datetime] = None
+
+    if start_time and end_time:
+        try:
+            parsed_start_time = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
+            parsed_end_time = datetime.fromisoformat(end_time.replace('Z', '+00:00'))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid start_time or end_time format. Use ISO format.")
+    elif window_minutes is not None:
+        parsed_end_time = datetime.utcnow()
+        parsed_start_time = parsed_end_time - timedelta(minutes=window_minutes)
+    # If neither time range nor window is provided, the correlation engine will default to last 60 minutes
+
+    # Get correlations from engine
+    correlation_engine = get_correlation_engine(db)
+    correlations = correlation_engine.correlate_events(
+        start_time=parsed_start_time,
+        end_time=parsed_end_time
+    )
+
+    # Apply filters
+    filtered_correlations = []
+    for corr in correlations:
+        # Severity filter (case-insensitive)
+        if severity and corr["severity"].lower() != severity.lower():
+            continue
+
+        # Asset filter: check if asset ID is in assets_involved
+        if asset:
+            # Assume asset parameter is asset ID (integer as string)
+            try:
+                asset_id = int(asset)
+                if asset_id not in corr["assets_involved"]:
+                    continue
+            except ValueError:
+                # If not an integer, maybe it's asset name? We don't have asset name in correlation result.
+                # For simplicity, we skip name-based filtering without a join.
+                # We could join with asset table, but to keep it simple and avoid extra DB load,
+                # we'll only support asset ID filtering.
+                # If the user wants to filter by name, they need to know the ID or we'd need to do a lookup.
+                # We'll do a simple lookup: if asset is not a number, treat as name and find matching assets.
+                # But note: we are not allowed to change schema, but we can query.
+                # We'll do a quick lookup for asset name -> ID.
+                asset_obj = db.query(Asset).filter(Asset.hostname.ilike(f"%{asset}%")).first()
+                if not asset_obj:
+                    # No matching asset, so this correlation won't match
+                    continue
+                if asset_obj.id not in corr["assets_involved"]:
+                    continue
+
+        # Source IP filter
+        if source_ip and source_ip not in corr["source_ips_involved"]:
+            continue
+
+        # User filter
+        if user and user not in corr["users_involved"]:
+            continue
+
+        filtered_correlations.append(corr)
+
+    return filtered_correlations

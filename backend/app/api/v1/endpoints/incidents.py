@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
+from datetime import datetime
 from app.db.session import get_db
 from app.models.incident import Incident
 from app.schemas.incident import IncidentCreate, IncidentInDB
@@ -80,3 +81,62 @@ def delete_incident(
     db.delete(incident)
     db.commit()
     return None
+
+@router.patch("/{incident_id}/status", response_model=IncidentInDB)
+def update_incident_status(
+    incident_id: int,
+    status: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Update the status of an incident.
+    Allowed status values: Investigating, Contained, Resolved, False Positive.
+    The stored status "NEW" is treated as "Open" in the UI.
+    """
+    incident = db.query(Incident).filter(Incident.id == incident_id).first()
+    if incident is None:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    # Validate the status
+    allowed_statuses = ["Investigating", "Contained", "Resolved", "False Positive"]
+    if status not in allowed_statuses:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid status. Must be one of {allowed_statuses}"
+        )
+
+    incident.status = status
+    # If resolving or marking as false positive, set resolved_at if not already set
+    if status in ["Resolved", "False Positive"] and incident.resolved_at is None:
+        incident.resolved_at = datetime.utcnow()
+
+    db.commit()
+    db.refresh(incident)
+    return incident
+
+@router.post("/{incident_id}/timeline", response_model=IncidentInDB)
+def add_to_timeline(
+    incident_id: int,
+    timeline_entry: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Add an entry to the incident's timeline.
+    The timeline_entry should be a dictionary. It is recommended to include a "type" key
+    to distinguish between different kinds of entries (e.g., "note", "investigation_step",
+    "evidence", "resolution_summary").
+    """
+    incident = db.query(Incident).filter(Incident.id == incident_id).first()
+    if incident is None:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    # Add a timestamp if not provided
+    if "timestamp" not in timeline_entry:
+        timeline_entry["timestamp"] = datetime.utcnow().isoformat()
+
+    incident.add_timeline_entry(timeline_entry)
+    db.commit()
+    db.refresh(incident)
+    return incident

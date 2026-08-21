@@ -1,10 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
+from typing import Optional
+from datetime import datetime
 
 from app.db.session import get_db
 from app.models.event import Event
 from app.models.incident import Incident
 from app.models.user import User
+from app.schemas.event import EventInDB
 from app.core.deps import get_current_active_user
 from app.services.ai_analyst import AIAnalystService
 from app.core.rate_limiting import limiter
@@ -73,17 +77,58 @@ async def investigate_event(
 @limiter.limit("10/minute")
 async def threat_hunting_query(
     request: Request,
-    query: str,
+    query: Optional[str] = Query(None),
+    skip: int = 0,
+    limit: int = 100,
+    event_type: Optional[str] = Query(None),
+    severity: Optional[str] = Query(None),
+    source_ip: Optional[str] = Query(None),
+    destination_ip: Optional[str] = Query(None),
+    user: Optional[str] = Query(None),
+    asset: Optional[str] = Query(None),
+    timestamp_start: Optional[datetime] = Query(None),
+    timestamp_end: Optional[datetime] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
     """
     Threat hunting endpoint.
-
-    Currently returns a placeholder response.
+    Allows querying events with various filters.
     """
-    return {
-        "query": query,
-        "results": [],
-        "message": "Threat hunting functionality would be implemented here with AI-powered querying",
-    }
+    # Build the query
+    db_query = db.query(Event)
+
+    # Apply filters
+    if event_type:
+        db_query = db_query.filter(Event.event_type == event_type)
+    if severity:
+        db_query = db_query.filter(Event.severity == severity)
+    if source_ip:
+        db_query = db_query.filter(Event.source_ip == source_ip)
+    if destination_ip:
+        db_query = db_query.filter(Event.destination_ip == destination_ip)
+    if user:
+        db_query = db_query.filter(Event.user == user)
+    if asset:
+        db_query = db_query.filter(Event.asset == asset)
+    if timestamp_start:
+        db_query = db_query.filter(Event.timestamp >= timestamp_start)
+    if timestamp_end:
+        db_query = db_query.filter(Event.timestamp <= timestamp_end)
+
+    # Free-text search if query is provided
+    if query:
+        search = f"%{query}%"
+        db_query = db_query.filter(
+            or_(
+                Event.event_type.ilike(search),
+                Event.description.ilike(search),
+                Event.source_ip.ilike(search),
+                Event.destination_ip.ilike(search),
+                Event.user.ilike(search),
+                Event.asset.ilike(search)
+            )
+        )
+
+    events = db_query.offset(skip).limit(limit).all()
+    return events

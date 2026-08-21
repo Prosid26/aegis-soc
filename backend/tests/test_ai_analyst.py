@@ -2,6 +2,7 @@
 Tests for the AI Security Analyst service.
 """
 import pytest
+from datetime import datetime
 from unittest.mock import Mock, AsyncMock
 from sqlalchemy.orm import Session
 from app.models.incident import Incident
@@ -24,7 +25,7 @@ def sample_incident():
     incident.risk_score = 60
     incident.confidence = 70
     incident.status = "NEW"
-    incident.reported_at = None  # We'll set a datetime in the test if needed
+    incident.reported_at = datetime.utcnow()
     incident.detections = []
     incident.mitre_techniques = []
     return incident
@@ -47,7 +48,12 @@ async def test_ai_analyst_service_uses_mock_provider(mock_db, sample_incident):
     assert isinstance(service.provider, MockProvider)
 
     # Mock the db queries to return empty lists
-    mock_db.query.return_value.filter.return_value.all.return_value = []
+    mock_filter_mock = Mock()
+    mock_filter_mock.all.return_value = []
+    mock_filter_mock.limit.return_value.all.return_value = []
+    mock_filter_mock.filter.return_value = mock_filter_mock
+    mock_filter_mock.count.return_value = 0
+    mock_db.query.return_value.filter.return_value = mock_filter_mock
 
     # We also need to mock the incident's relationships
     sample_incident.detections = []
@@ -80,13 +86,17 @@ async def test_ai_analyst_handles_empty_incident(mock_db):
     incident.risk_score = 30
     incident.confidence = 40
     incident.status = "NEW"
-    incident.reported_at = None
+    incident.reported_at = datetime.utcnow()
     incident.detections = []
     incident.mitre_techniques = []
 
     # Mock db queries to return empty lists
-    mock_db.query.return_value.filter.return_value.all.return_value = []
-    mock_db.query.return_value.filter.return_value.count.return_value = 0
+    mock_filter_mock = Mock()
+    mock_filter_mock.all.return_value = []
+    mock_filter_mock.limit.return_value.all.return_value = []
+    mock_filter_mock.filter.return_value = mock_filter_mock
+    mock_filter_mock.count.return_value = 0
+    mock_db.query.return_value.filter.return_value = mock_filter_mock
 
     result = await service.analyze_incident(incident)
 
@@ -109,8 +119,12 @@ async def test_ai_analyst_persistence(mock_db, sample_incident):
     mock_db.rollback = Mock()
 
     # Mock queries to return empty
-    mock_db.query.return_value.filter.return_value.all.return_value = []
-    mock_db.query.return_value.filter.return_value.count.return_value = 0
+    mock_filter_mock = Mock()
+    mock_filter_mock.all.return_value = []
+    mock_filter_mock.limit.return_value.all.return_value = []
+    mock_filter_mock.filter.return_value = mock_filter_mock
+    mock_filter_mock.count.return_value = 0
+    mock_db.query.return_value.filter.return_value = mock_filter_mock
 
     await service.analyze_incident(sample_incident)
 

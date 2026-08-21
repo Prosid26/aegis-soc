@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Stat } from '@/components/ui/stat';
 import { apiClient } from '@/lib/api';
@@ -455,128 +456,177 @@ export default function Dashboard() {
 
   // Fetch all dashboard data
   const fetchDashboardData = async () => {
-    if (!authUtils.isAuthenticated()) {
-      setLoading(false);
-      return;
+  if (!authUtils.isAuthenticated()) {
+    // Redirect to login page if not authenticated
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login';
+    }
+    return;
+  }
+
+  try {
+    setError(null);
+
+    // Get authoritative dashboard metrics from the backend
+    const dashboardResponse = await apiClient.get('/analytics/dashboard');
+    const dashboard = dashboardResponse.data;
+
+    // Fetch events for the telemetry panel
+    const eventsResponse = await apiClient.get('/events/', {
+      params: { skip: 0, limit: 1000 }
+    });
+
+    const allEvents = Array.isArray(eventsResponse.data)
+      ? eventsResponse.data
+      : [];
+
+    // Sort newest events first
+    const sortedEvents = [...allEvents].sort(
+      (a: any, b: any) =>
+        new Date(b.timestamp).getTime() -
+        new Date(a.timestamp).getTime()
+    );
+
+    const latestEvents = sortedEvents.slice(0, 15);
+
+    // Events per minute based on backend's 24-hour count
+    const events24h = Number(dashboard.events_24h || 0);
+    const eventsPerMinute =
+      Math.round((events24h / (24 * 60)) * 10) / 10;
+
+    // Fetch incidents
+    const incidentsResponse = await apiClient.get('/incidents/', {
+      params: { skip: 0, limit: 100 }
+    });
+
+    const allIncidents = Array.isArray(incidentsResponse.data)
+      ? incidentsResponse.data
+      : [];
+
+    // Active incidents
+    const activeIncidentObjects = allIncidents.filter(
+      (incident: any) =>
+        incident.status === 'NEW' ||
+        incident.status === 'INVESTIGATING'
+    );
+
+    const activeIncidents = Number(dashboard.open_incidents || 0);
+
+    // Critical incidents from backend analytics
+    const criticalIncidents = Number(
+      dashboard.critical_incidents || 0
+    );
+
+    // Average risk score
+    const avgRiskScore =
+      activeIncidentObjects.length > 0
+        ? activeIncidentObjects.reduce(
+            (sum: number, incident: any) =>
+              sum + Number(incident.risk_score || 0),
+            0
+          ) / activeIncidentObjects.length
+        : 0;
+
+    // High-risk active incidents
+    const highRiskDetections = activeIncidentObjects.filter(
+      (incident: any) =>
+        Number(incident.risk_score || 0) > 70
+    ).length;
+
+    // Determine threat level
+    const highSeverityIncidents = activeIncidentObjects.filter(
+      (incident: any) =>
+        incident.severity?.toLowerCase() === 'high'
+    ).length;
+
+    let threatLevel = 'LOW';
+
+    if (criticalIncidents > 0) {
+      threatLevel = 'CRITICAL';
+    } else if (highSeverityIncidents > 2) {
+      threatLevel = 'HIGH';
+    } else if (highSeverityIncidents > 0) {
+      threatLevel = 'ELEVATED';
+    } else if (activeIncidents > 3) {
+      threatLevel = 'GUARDED';
     }
 
-    try {
-      setError(null);
+    // System health checks
+    // IMPORTANT: Do not run the detection engine here.
+    const healthChecks = await Promise.allSettled([
+      apiClient.get('/health'),
+      apiClient.get('/assets/', {
+        params: { skip: 0, limit: 1 }
+      }),
+      apiClient.get('/mitre/', {
+        params: { skip: 0, limit: 1 }
+      })
+    ]);
 
-      // Fetch events (last 5 minutes for better sample)
-      const eventsResponse = await apiClient.get('/events/', {
-        params: { limit: 1000 }
-      });
-      const allEvents = eventsResponse.data;
+    const apiHealthy =
+      healthChecks[0].status === 'fulfilled';
 
-      // Calculate events per minute
-      const now = new Date();
-      const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
-      const recentEvents = allEvents.filter((event: any) => {
-        const eventTime = new Date(event.timestamp);
-        return eventTime >= fiveMinutesAgo;
-      });
-      const eventsPerMinute = Math.round(recentEvents.length / 5);
+    const databaseHealthy =
+      healthChecks[1].status === 'fulfilled';
 
-      // Fetch incidents
-      const incidentsResponse = await apiClient.get('/incidents/');
-      const allIncidents = incidentsResponse.data;
+    const mitreHealthy =
+      healthChecks[2].status === 'fulfilled';
 
-      // Count active incidents (NEW or INVESTIGATING)
-      const activeIncidents = allIncidents.filter((incident: any) =>
-        incident.status === 'NEW' || incident.status === 'INVESTIGATING'
-      ).length;
+    const systemHealth = {
+      api: apiHealthy ? 'healthy' : 'unhealthy',
+      database: databaseHealthy ? 'healthy' : 'unhealthy',
+      detectionEngine: 'unknown',
+      aiAnalyst: mitreHealthy ? 'healthy' : 'unknown',
+      authentication: authUtils.isAuthenticated()
+        ? 'healthy'
+        : 'unhealthy'
+    };
 
-      // Count critical incidents (severity critical and active)
-      const criticalIncidents = allIncidents.filter((incident: any) =>
-        (incident.status === 'NEW' || incident.status === 'INVESTIGATING') &&
-        incident.severity === 'critical'
-      ).length;
+    // Update dashboard state
+    setEvents(latestEvents);
+    setIncidents(allIncidents);
 
-      // Calculate average risk score of active incidents
-      const activeIncidentObjects = allIncidents.filter((incident: any) =>
-        incident.status === 'NEW' || incident.status === 'INVESTIGATING'
-      );
-      const avgRiskScore = activeIncidentObjects.length > 0 ?
-        activeIncidentObjects.reduce((sum: number, incident: any) => sum + (incident.risk_score || 0), 0) / activeIncidentObjects.length :
-        0;
+    // Detection engine is not executed during dashboard refresh
+    setDetections([]);
 
-      // Count high risk detections (we'll need to fetch these)
-      const detectionResponse = await apiClient.get('/detection/run');
-      const detectionAlerts = detectionResponse.data || [];
-      const highRiskDetections = detectionAlerts.filter((d: any) =>
-        (d.risk_score || 0) > 70
-      ).length;
+    setThreatLevel(threatLevel);
 
-      // Determine threat level based on active incidents and their severity
-      let threatLevel = 'LOW';
-      if (activeIncidents > 0) {
-        const criticalSeverityIncidents = allIncidents.filter((incident: any) =>
-          (incident.status === 'NEW' || incident.status === 'INVESTIGATING') &&
-          incident.severity === 'critical'
-        ).length;
+    setMetrics({
+      eventsPerMinute,
+      activeIncidents,
+      criticalIncidents,
+      detectionCount: 0,
+      avgRiskScore: Number(avgRiskScore.toFixed(1)),
+      highRiskDetections
+    });
 
-        const highSeverityIncidents = allIncidents.filter((incident: any) =>
-          (incident.status === 'NEW' || incident.status === 'INVESTIGATING') &&
-          incident.severity === 'high'
-        ).length;
+    setSystemHealth(systemHealth);
 
-        if (criticalSeverityIncidents > 0) {
-          threatLevel = 'CRITICAL';
-        } else if (highSeverityIncidents > 2) {
-          threatLevel = 'HIGH';
-        } else if (highSeverityIncidents > 0) {
-          threatLevel = 'ELEVATED';
-        } else if (activeIncidents > 3) {
-          threatLevel = 'GUARDED';
-        }
-      }
+  } catch (err: any) {
+    console.error('Failed to fetch dashboard data:', err);
 
-      // Fetch system health (simplified - in reality we'd have specific endpoints)
-      const healthChecks = await Promise.allSettled([
-        apiClient.get('/health').then(() => 'healthy').catch(() => 'unhealthy'),
-        apiClient.get('/incidents/').then(() => 'healthy').catch(() => 'unhealthy'),
-        apiClient.get('/events/').then(() => 'healthy').catch(() => 'unhealthy'),
-        apiClient.get('/mitre/techniques').then(() => 'healthy').catch(() => 'unhealthy'),
-        authUtils.isAuthenticated() ? Promise.resolve('healthy') : Promise.resolve('unhealthy')
-      ]);
-
-      const systemHealth = {
-        api: healthChecks[0].status === 'fulfilled' && healthChecks[0].value === 'healthy' ? 'healthy' : 'unhealthy',
-        database: healthChecks[1].status === 'fulfilled' && healthChecks[1].value === 'healthy' ? 'healthy' : 'unhealthy',
-        detectionEngine: healthChecks[2].status === 'fulfilled' && healthChecks[2].value === 'healthy' ? 'healthy' : 'unhealthy',
-        aiAnalyst: healthChecks[3].status === 'fulfilled' && healthChecks[3].value === 'healthy' ? 'healthy' : 'unhealthy',
-        authentication: healthChecks[4].status === 'fulfilled' && healthChecks[4].value === 'healthy' ? 'healthy' : 'unhealthy'
-      };
-
-      // Update state
-      setEvents(recentEvents.slice(0, 15)); // Show latest 15 events
-      setIncidents(allIncidents);
-      setDetections(detectionAlerts);
-      setThreatLevel(threatLevel);
-      setMetrics({
-        eventsPerMinute,
-        activeIncidents,
-        criticalIncidents,
-        detectionCount: detectionAlerts.length,
-        avgRiskScore: Number(avgRiskScore.toFixed(1)),
-        highRiskDetections
-      });
-      setSystemHealth(systemHealth);
-    } catch (err) {
-      console.error('Failed to fetch dashboard data:', err);
-      setError('Failed to load dashboard data');
-    } finally {
-      setLoading(false);
-    }
-  };
+    if (err?.response?.status === 401) {
+  setError('Authentication expired. Please log in again.');
+} else {
+  setError('Failed to load dashboard data');
+}
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Initial load and periodic updates
   useEffect(() => {
-    fetchDashboardData();
+    const loadData = async () => {
+      await fetchDashboardData();
+    };
+
+    loadData();
 
     // Update every 4 seconds for real-time operations look
-    const interval = setInterval(fetchDashboardData, 4000);
+    const interval = setInterval(async () => {
+      await fetchDashboardData();
+    }, 4000);
     return () => clearInterval(interval);
   }, []);
 
