@@ -11,6 +11,7 @@ from app.models.user import User
 from app.schemas.event import EventInDB
 from app.core.deps import get_current_active_user
 from app.services.ai_analyst import AIAnalystService
+from app.services.ai_provider import get_ai_provider
 from app.core.rate_limiting import limiter
 
 router = APIRouter()
@@ -132,3 +133,41 @@ async def threat_hunting_query(
 
     events = db_query.offset(skip).limit(limit).all()
     return events
+
+
+@router.get("/health")
+@limiter.limit("10/minute")
+async def ai_health_check(
+    request: Request,
+):
+    """
+    AI Analyst health check.
+    Verifies that the AI Analyst service can initialize and the configured AI provider is healthy.
+    Does NOT make an actual AI inference call.
+    """
+    try:
+        # Get the AI provider based on configuration
+        provider = get_ai_provider()
+        # Perform health check on the provider
+        is_healthy = await provider.health_check()
+        provider_name = type(provider).__name__.replace("Provider", "").lower()
+        # If we get here, the AI Analyst dependencies are healthy
+        return {
+            "status": "healthy" if is_healthy else "unhealthy",
+            "service": "ai_analyst",
+            "provider": provider_name,
+            "timestamp": datetime.utcnow().isoformat(),
+            "details": {
+                "provider_healthy": is_healthy
+            }
+        }
+    except Exception as e:
+        # Log the error for debugging (in production, use proper logging)
+        # For now, we'll return unhealthy with basic error info
+        return {
+            "status": "unhealthy",
+            "service": "ai_analyst",
+            "provider": "unknown",
+            "timestamp": datetime.utcnow().isoformat(),
+            "error": str(e)
+        }

@@ -561,6 +561,9 @@ export default function Dashboard() {
       }),
       apiClient.get('/detection/health/', {
         params: { skip: 0, limit: 1 }
+      }),
+      apiClient.get('/ai/health/', {
+        params: { skip: 0, limit: 1 }
       })
     ]);
 
@@ -573,11 +576,14 @@ export default function Dashboard() {
     const detectionEngineHealthy =
       healthChecks[2].status === 'fulfilled';
 
+    const aiAnalystHealthy =
+      healthChecks[3].status === 'fulfilled';
+
     const systemHealth = {
       api: apiHealthy ? 'healthy' : 'unhealthy',
       database: databaseHealthy ? 'healthy' : 'unhealthy',
       detectionEngine: detectionEngineHealthy ? 'healthy' : 'unhealthy',
-      aiAnalyst: 'unknown',
+      aiAnalyst: aiAnalystHealthy ? 'healthy' : 'unhealthy',
       authentication: authUtils.isAuthenticated()
         ? 'healthy'
         : 'unhealthy'
