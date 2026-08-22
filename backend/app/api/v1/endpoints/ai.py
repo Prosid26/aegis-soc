@@ -135,7 +135,7 @@ async def threat_hunting_query(
     return events
 
 
-@router.get("/health")
+@router.get("/health/")
 @limiter.limit("10/minute")
 async def ai_health_check(
     request: Request,
