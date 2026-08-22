@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import axios from 'axios';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
@@ -554,7 +555,7 @@ export default function Dashboard() {
     // System health checks
     // IMPORTANT: Do not run the detection engine here.
     const healthChecks = await Promise.allSettled([
-      apiClient.get('/health'),
+      axios.get(`${process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') || 'https://aegis-soc-su9w.onrender.com'}/health`),
       apiClient.get('/assets/', {
         params: { skip: 0, limit: 1 }
       }),
