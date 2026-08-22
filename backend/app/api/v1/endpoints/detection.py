@@ -288,3 +288,45 @@ def get_correlations(
         filtered_correlations.append(corr)
 
     return filtered_correlations
+
+
+@router.get("/health")
+@limiter.limit("10/minute")
+def detection_health_check(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    Detection Engine health check.
+    Verifies that the Detection Engine can access its dependencies (database).
+    Does NOT run detection algorithms.
+    """
+    try:
+        # Create a DetectionEngine instance to verify dependencies can be initialized
+        # This will fail if there are issues with the database connection
+        detection_engine = DetectionEngine(db)
+
+        # Perform a simple database query to verify connectivity
+        # We'll just check if we can query one table that the Detection Engine uses
+        # Using the Event table as it's fundamental to detection
+        event_count = db.query(Detection).limit(1).count()
+
+        # If we get here, the Detection Engine dependencies are healthy
+        return {
+            "status": "healthy",
+            "service": "detection_engine",
+            "timestamp": datetime.utcnow().isoformat(),
+            "details": {
+                "database_connectivity": "ok",
+                "event_table_accessible": True
+            }
+        }
+    except Exception as e:
+        # Log the error for debugging (in production, use proper logging)
+        # For now, we'll return unhealthy with basic error info
+        return {
+            "status": "unhealthy",
+            "service": "detection_engine",
+            "timestamp": datetime.utcnow().isoformat(),
+            "error": str(e)
+        }

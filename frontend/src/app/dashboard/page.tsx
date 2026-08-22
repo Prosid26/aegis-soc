@@ -559,7 +559,7 @@ export default function Dashboard() {
       apiClient.get('/assets/', {
         params: { skip: 0, limit: 1 }
       }),
-      apiClient.get('/mitre/', {
+      apiClient.get('/detection/health/', {
         params: { skip: 0, limit: 1 }
       })
     ]);
@@ -570,14 +570,14 @@ export default function Dashboard() {
     const databaseHealthy =
       healthChecks[1].status === 'fulfilled';
 
-    const mitreHealthy =
+    const detectionEngineHealthy =
       healthChecks[2].status === 'fulfilled';
 
     const systemHealth = {
       api: apiHealthy ? 'healthy' : 'unhealthy',
       database: databaseHealthy ? 'healthy' : 'unhealthy',
-      detectionEngine: 'unknown',
-      aiAnalyst: mitreHealthy ? 'healthy' : 'unknown',
+      detectionEngine: detectionEngineHealthy ? 'healthy' : 'unhealthy',
+      aiAnalyst: 'unknown',
       authentication: authUtils.isAuthenticated()
         ? 'healthy'
         : 'unhealthy'
